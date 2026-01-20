@@ -6,7 +6,7 @@ EasyDesktop 配置文件
 import sys
 
 # ===== 应用程序基本信息 =====
-APP_VERSION = "2.1.1"
+APP_VERSION = "2.2.0"
 APP_NAME = "EasyDesktop"
 DEFAULT_WINDOW_TITLE = "EasyDesktop_Main"
 
@@ -167,7 +167,8 @@ def get_default_config(width, height):
         "bgType":"2",
         'blur_bg':True,
         'blur_effect':30,
-        "dir_order":{}
+        "dir_order":{},
+        "class_order":[]
     }
 
 # ===== 系统应用程序配置 =====

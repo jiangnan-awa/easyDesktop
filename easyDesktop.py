@@ -34,6 +34,8 @@ import win32pipe
 import base64
 import io
 from window_effect import WindowEffect,set_window_rounded_corners
+import kb_tool
+keyboard_monitor = kb_tool.KeyboardMonitor()
 def activate_existing_instance():
     """激活已存在的实例"""
     try:
@@ -286,21 +288,22 @@ def hotKey_outAction():
 def hotkey_detect():
     while True:
         time.sleep(0.1)
+        kb_list = keyboard_monitor.get_pressed_keys()
         if config["cf_type"]=="2":
-            if keyboard.is_pressed('left windows') and keyboard.is_pressed('shift'):
+            if "windows" in kb_list and "shift" in kb_list and len(kb_list)==2:
                 hotKey_outAction()
                 keyboard.read_key()
         if config["cf_type"]=="3":
-            if keyboard.is_pressed('left windows') and keyboard.is_pressed('`'):
+            if "windows" in kb_list and "`" in kb_list and len(kb_list)==2:
                 hotKey_outAction()
                 keyboard.read_key()
         if config["cf_type"]=="4":
             hk = config["cf_hotkey"].split("+")
             ok = 0
             for i in range(len(hk)):
-                if keyboard.is_pressed(hk[i]):
+                if hk[i] in kb_list:
                     ok += 1
-            if ok == len(hk):
+            if ok == len(hk) and len(kb_list)==len(hk):
                 hotKey_outAction()
                 keyboard.read_key()
 
@@ -394,6 +397,9 @@ def get_icon(exe_path, name):
         ico_path = output_path = cfg.DESKTOP_ICO_PATH + dir_name + "/" + name + ".ico"
         relative_path = cfg.DESKTOP_ICO_RELATIVE_PATH + dir_name + "/" + name + ".webp"
 
+        if(os.path.exists(relative_path)):
+            return {"success":True,"ico":relative_path}
+
         if os.path.exists(relative_path):
             return {"success":True,"ico":relative_path}
 
@@ -478,6 +484,7 @@ def get_url_icon(url_path):
         if not os.path.exists(cfg.DESKTOP_ICO_PATH + dir_name):
             os.makedirs(cfg.DESKTOP_ICO_PATH + dir_name)
         image.save(cfg.DESKTOP_ICO_PATH + dir_name + "/" + os.path.basename(url_path) + ".webp")
+        image.close()
         return {"success":True,"ico":cfg.DESKTOP_ICO_RELATIVE_PATH + dir_name + "/" + os.path.basename(url_path) + ".webp"}
     except Exception as e:
         print(f"提取图标失败: {e}")
@@ -553,7 +560,7 @@ def merge_lists(a, b):
         a_indices = sorted(index_mapping.keys())
     
     return a
-def update_inf(dir_path):
+def update_inf(dir_path,retry_count=0):
     try:
         if dir_path == "/\\":
             dir_path = "desktop"
@@ -765,15 +772,22 @@ def update_inf(dir_path):
                     r_index += 1
             temp_list = []
         except:
-            pass
+            retry_count+=1
+            if retry_count<=5:
+                return update_inf(dir_path,retry_count)
+            else:
+                pass
 
         # 收藏排序
         out_with_cl = []
         for t in [True,False]:
             for i in range(len(out_data)):
-                out_data[i]["cl"] = is_cl(out_data[i]["filePath"])
-                if out_data[i]["cl"]==t:
-                    out_with_cl.append(out_data[i])
+                try:
+                    out_data[i]["cl"] = is_cl(out_data[i]["filePath"])
+                    if out_data[i]["cl"]==t:
+                        out_with_cl.append(out_data[i])
+                except:
+                    break
         out_data = out_with_cl
         # 编号写入
         for i, item in enumerate(out_data):
@@ -1684,15 +1698,39 @@ class AppAPI:
             json.dump(itemClass,f,ensure_ascii=False)
         return {"success":True}
     def read_class(self,key):
-        global itemClass
+        global itemClass,config
         if key=="" or key=="all" or key=="全部":
             if not config["df_dir"] in itemClass:
                 itemClass[config["df_dir"]]={}
-            return {"success":True,"data":itemClass[config["df_dir"]]}
+            # 排序
+            class_order_inf = config["class_order"]
+            if len(class_order_inf)==0:
+                class_order_inf = list(itemClass[config["df_dir"]].keys())
+            outputData = {}
+            index = 0
+            while True:
+                if index>=len(class_order_inf):
+                    break
+                key = class_order_inf[index]
+                if key in itemClass[config["df_dir"]]:
+                    outputData[key] = itemClass[config["df_dir"]][key]
+                    index += 1
+                else:
+                    del class_order_inf[index]
+                    json.dump(config,open("config.json","w"),ensure_ascii=False)
+
+            return {"success":True,"data":outputData}
         if key in itemClass[config["df_dir"]]:
             return {"success":True,"files":itemClass[config["df_dir"]][key]}
         else:
             return {"success":False,"files":[],"message":"没有找到该分类的文件"}
+
+    def save_classOrder(self,order):
+        global config
+        config["class_order"] = order
+        json.dump(config,open("config.json","w"),ensure_ascii=False)
+        return {"success":True}
+
     def remove_class(self,key):
         global itemClass
         if key in itemClass[config["df_dir"]]:

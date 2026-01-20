@@ -2029,6 +2029,9 @@ async function render_class_btn(){
     }
     for(let index of class_names){
         let btn = document.createElement("button")
+        if(index!="全部"){
+            btn.draggable = true
+        }
         btn.classList.add("class_bar_btn")
         if(index == last_group){
             btn.classList.add("active")
@@ -2116,7 +2119,7 @@ window.addEventListener("keydown", function(event) {
 });
 
 let dragging = false
-boxs = [document.getElementById("filesContainer"),document.getElementById("filesListContainer")]
+boxs = [document.getElementById("filesContainer"),document.getElementById("filesListContainer"),document.getElementById("class_bar")]
 content_box = document.getElementById("content_box")
 boxs[0].dataset.other = "list"
 boxs[1].dataset.other = "grid"
@@ -2174,14 +2177,20 @@ for(let list of boxs){
             detect_posMove()
         },100)
     })
-
     list.addEventListener('dragenter',(e)=>{
         e.preventDefault()
         dragging = true
         if(e.target === currentLi||e.target === list){
             return
         }
-        if(e.target.dataset.is_cl!=currentLi.dataset.is_cl)return
+        try{
+            if(currentLi.classList.contains("class_bar_btn")){
+                if(e.target.classList.contains("class_bar_btn")==false || e.target.draggable!=true){
+                    return
+                }
+            }
+            if(e.target.dataset.is_cl!=currentLi.dataset.is_cl)return
+        }catch(e){return}
         let liArray = Array.from(list.childNodes)
         let currentIndex = liArray.indexOf(currentLi)
         let targetindex = liArray.indexOf(e.target)
@@ -2202,9 +2211,19 @@ for(let list of boxs){
         currentLi.classList.remove('moving')
         dragging = false
         stop_moveAction()
-        await save_new_order(list.dataset.other)
+        if(e.target.classList.contains("class_bar_btn")){
+            var order = []
+            for(let item of boxs[2].children){
+                if(item.draggable!=true)continue
+                order.push(item.id)
+            }
+            await ApiHelper.call("save_classOrder",order)
+        }else{
+            await save_new_order(list.dataset.other)
+        }
 
     })
+
 }
 
 async function save_new_order(reload_part){
