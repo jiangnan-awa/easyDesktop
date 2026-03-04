@@ -519,6 +519,12 @@ const MenuManager = {
         }
 
         this.adjustMenuPosition(contextMenu, e);
+
+        if(file.edit_ico!=undefined){
+            DOMCache.get("edit_icon_btn").innerText="恢复默认图标"
+        }else{
+            DOMCache.get("edit_icon_btn").innerText="自定义图标"
+        }
         disableScroll();
     },
 
@@ -862,6 +868,7 @@ const EventManager = {
 
         DOMCache.get('menuRename').addEventListener('click', this.showRenameDialog);
         DOMCache.get('menuDelete').addEventListener('click', this.showDeleteConfirm);
+        DOMCache.get("menuCustomIcon").addEventListener('click',this.setIcon)
 
         // 空白区域右键菜单
         DOMCache.get('menuPaste').addEventListener('click', async () => {
@@ -1233,6 +1240,11 @@ const EventManager = {
         deleteConfirm.style.display = 'flex';
 
         MenuManager.hideContextMenu();
+    },
+ 
+    async setIcon(){
+        await ApiHelper.call("setIcon", AppState.selectedFile.filePath,AppState.selectedFile.edit_ico==undefined)
+        NavigationManager.refreshCurrentPath()
     }
 };
 

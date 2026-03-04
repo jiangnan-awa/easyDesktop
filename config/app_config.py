@@ -4,17 +4,20 @@ EasyDesktop 配置文件
 包含应用程序的所有配置常量和默认设置
 """
 import sys
+import json
 
 # ===== 应用程序基本信息 =====
-APP_VERSION = "2.2.0"
+APP_VERSION = "2.3.0"
 APP_NAME = "EasyDesktop"
 DEFAULT_WINDOW_TITLE = "EasyDesktop_Main"
 
 # ===== 路径配置 =====
 if hasattr(sys, '_MEIPASS'):
     DESKTOP_ICO_PATH = "./_internal/desktopICO/"
+    ICON_SET_PATH = "./_internal/icon_set/"
 else:
     DESKTOP_ICO_PATH = "./desktopICO/"
+    ICON_SET_PATH = "./icon_set/"
 DESKTOP_ICO_RELATIVE_PATH = "./desktopICO/"
 RESOURCES_PATH = "./resources/"
 FILE_ICO_PATH = "./resources/file_icos/"
@@ -23,6 +26,11 @@ CL_DATA_FILE = "cl_data.json"
 USER_CLASS_FILE = "user_class.json"
 BUGS_REPORT_DIR = "bugs_report"
 EMPTY_XLSX_TEMPLATE = "resources/empty.xlsx"
+
+# ===== 配置读取 =====
+def load_json(path):
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
 
 # ===== Windows API 常量 =====
 SM_CXSCREEN = 0  # 屏幕宽度
@@ -127,6 +135,9 @@ FILE_ICO = {
     ".bat": "./resources/file_icos/bat.png",
     "unkonw": "./resources/file_icos/unkonw.png",
 }
+DEFAULT_EXE_ICON = "./resources/file_icos/exe.png"
+DEFAULT_UNKONW_ICON = "./resources/file_icos/unkonw.png"
+DEFAULT_DIR_ICON = "./resources/file_icos/dir.png"
 
 # ===== 应用程序默认配置 =====
 def get_default_config(width, height):
@@ -141,6 +152,7 @@ def get_default_config(width, height):
         dict: 默认配置字典
     """
     return {
+        "version":"0.0.0",
         "theme": "light",
         "language": "zh-CN",
         "themeChangeType": "2",
@@ -168,7 +180,8 @@ def get_default_config(width, height):
         'blur_bg':True,
         'blur_effect':30,
         "dir_order":{},
-        "class_order":[]
+        "class_order":[],
+        "ico":{}
     }
 
 # ===== 系统应用程序配置 =====

@@ -5,6 +5,7 @@ build/
 dist/
 bugs_report/
 _internal/
+icon_set/
 *.spec
 *.json
 b.html
@@ -12,6 +13,7 @@ bg.png
 bg.jpg
 report.md
 test.py
+t.py
 
 # Custom2(Already deduplicated)
 AppData/

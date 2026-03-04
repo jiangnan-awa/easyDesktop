@@ -1,4 +1,5 @@
-from icoextract import IconExtractor
+import getIcon # 本地模块源
+from icon_mgr import iconMgr
 import os
 import win32com.client
 import win32gui
@@ -23,8 +24,6 @@ from requests import get as requests_get
 import webbrowser
 import keyboard
 import send2trash
-import re
-import win32ui
 import config as cfg
 import traceback
 import winerror
@@ -144,7 +143,6 @@ try:
         os.mkdir(cfg.DESKTOP_ICO_PATH)
 except:
     msgbox(os.getcwd())
-
 def get_real_path():
     if getattr(sys, "frozen", False):
         return os.path.dirname(sys.executable)
@@ -257,6 +255,7 @@ if os.path.exists(cfg.CONFIG_FILE):
     for c_item in default_config.keys():
         if c_item not in config.keys():
             config[c_item] = default_config[c_item]
+    config["version"] = cfg.APP_VERSION
     json.dump(config, open(cfg.CONFIG_FILE, "w"))
 else:
     config = default_config
@@ -307,209 +306,6 @@ def hotkey_detect():
                 hotKey_outAction()
                 keyboard.read_key()
 
-def turn_png(file_path):
-    # try:
-    # 检查文件是否存在
-    file_ok = False
-    range_time = 0
-    while True:
-        if os.path.exists(file_path):
-            file_ok = True
-            break
-        else:
-            time.sleep(0.1)
-            range_time += 1
-            if range_time>100:
-                break
-    if file_ok==False:
-        print(f"错误：文件 '{file_path}' 不存在")
-        return False
-
-    # 检查文件扩展名是否为ico
-    if not file_path.lower().endswith(".ico"):
-        print(f"错误：文件 '{file_path}' 不是ICO文件")
-        return False
-
-    # 打开ICO文件并抑制警告
-    import warnings
-
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", UserWarning)
-        with Image.open(file_path) as img:
-            # 获取最大尺寸的图标
-            if hasattr(img, "size") and img.size[0] > 0:
-                png_path = os.path.splitext(file_path)[0] + ".webp"
-                img.save(png_path, "WEBP")
-                return png_path
-            else:
-                return "./resources/file_icos/exe.png"
-
-
-    # except Exception as e:
-    #     print(f"转换ICO到PNG过程中发生错误: {str(e)}")
-    #     return "./resources/file_icos/exe.png"
-
-
-def get_desktop_path():
-    shell = win32com.client.Dispatch("WScript.Shell")
-    return shell.SpecialFolders("Desktop")
-
-def get_shortcut_icon_win32(lnk_path,name):
-    try:
-        shell = win32com.client.Dispatch("WScript.Shell")
-        shortcut = shell.CreateShortCut(lnk_path)
-        result = ""
-        # 获取图标位置
-        icon_location = shortcut.IconLocation
-        if icon_location:
-            if ',' in icon_location:
-                path_part, index_part = icon_location.rsplit(',', 1)
-                result = path_part.strip()
-            else:
-                result = icon_location.strip()
-        
-        if result:
-            if result.split(".")[-1] in ["ico","png","jpg","jpeg"]:
-                dir_name = os.path.dirname(lnk_path).replace("/", "-").replace(R"\\", "-").replace(":", "-")
-                if not os.path.exists(cfg.DESKTOP_ICO_PATH + dir_name):
-                    os.makedirs(cfg.DESKTOP_ICO_PATH + dir_name)
-                output_path = cfg.DESKTOP_ICO_PATH + dir_name + "/" + name + ".ico"
-                relative_path = cfg.DESKTOP_ICO_RELATIVE_PATH + dir_name + "/" + name + ".webp"
-                shutil.copyfile(result, output_path)
-                output_path = turn_png(output_path)
-                loaded_exe_cache[lnk_path] = relative_path
-                return {"success":True,"ico":relative_path}
-            elif result.split(".")[-1] in ["exe",".EXE"]:
-                return get_icon(result,name)
-            else:
-                return {"success":False,"ico":"./resources/file_icos/exe.png"}
-        
-        return {"success":False,"ico":"./resources/file_icos/exe.png"}
-    except Exception as e:
-        print(f"处理快捷方式 {lnk_path} 时出错: {e}")
-        return {"success":False,"ico":"./resources/file_icos/exe.png"}
-
-def get_icon(exe_path, name):
-    try:
-        dir_name = os.path.dirname(exe_path).replace("/", "-").replace(R"\\", "-").replace(":", "-")
-        if not os.path.exists(cfg.DESKTOP_ICO_PATH + dir_name):
-            os.makedirs(cfg.DESKTOP_ICO_PATH + dir_name)
-        ico_path = output_path = cfg.DESKTOP_ICO_PATH + dir_name + "/" + name + ".ico"
-        relative_path = cfg.DESKTOP_ICO_RELATIVE_PATH + dir_name + "/" + name + ".webp"
-
-        if(os.path.exists(relative_path)):
-            return {"success":True,"ico":relative_path}
-
-        if os.path.exists(relative_path):
-            return {"success":True,"ico":relative_path}
-
-        # 检查exe文件是否存在
-        if not os.path.exists(exe_path):
-            print(f"警告：EXE文件不存在 {exe_path}")
-            return "./resources/file_icos/exe.png"
- 
-        try:
-            extractor = IconExtractor(exe_path)
-            extractor.export_icon(output_path)
-            output_path = turn_png(output_path)
-            if os.path.exists(ico_path):
-                os.remove(ico_path)
-            if output_path!=False and output_path != "./resources/file_icos/exe.png":
-                loaded_exe_cache[exe_path] = relative_path
-                return {"success":True,"ico":relative_path}
-            else:
-                # 如果转换失败，使用默认图标
-                print(f"图标转换失败，使用默认图标: {exe_path}")
-                return {"success":False,"ico":"./resources/file_icos/exe.png"}
-        except Exception as extract_error:
-            print(f"图标提取失败: {extract_error} - {exe_path}")
-            return {"success":False,"ico":"./resources/file_icos/exe.png"}
-
-    except Exception as e:
-        print(f"获取图标时发生未知错误: {e} - {exe_path}")
-        return {"success":False,"ico":"./resources/file_icos/exe.png"}
-
-
-def get_url_icon(url_path):
-    # print(url_path)
-    dir_name = os.path.dirname(url_path).replace("/", "-").replace(R"\\", "-").replace(":", "-")
-    # 解析 .url 文件
-    icon_file = None
-    icon_index = 0
-    try:
-        with open(url_path, "r", encoding="utf-8") as f:
-            content = f.read()
-        icon_match = re.search(r"IconFile\s*=\s*(.*)", content, re.IGNORECASE)
-        index_match = re.search(r"IconIndex\s*=\s*(\d+)", content, re.IGNORECASE)
-
-        if icon_match:
-            icon_file = icon_match.group(1).strip()
-            if icon_file.startswith('"') and icon_file.endswith('"'):
-                icon_file = icon_file[1:-1]
-            icon_file = os.path.expandvars(icon_file)
-            if not os.path.isabs(icon_file):
-                base_dir = os.path.dirname(os.path.abspath(url_path))
-                icon_file = os.path.join(base_dir, icon_file)
-
-        if index_match:
-            icon_index = int(index_match.group(1))
-    except Exception as e:
-        return {"success":False,"ico":"./resources/file_icos/exe.png"}
-
-    if not icon_file or not os.path.exists(icon_file):
-        return {"success":False,"ico":"./resources/file_icos/exe.png"}
-
-    # 从文件资源中提取图标
-    try:
-        large, small = win32gui.ExtractIconEx(icon_file, icon_index)
-        if not large and not small:
-            return "/resources/file_icos/exe.png"
-        hicon = large[0] if large else small[0]
-        ico_x = win32api.GetSystemMetrics(win32con.SM_CXICON)
-        ico_y = win32api.GetSystemMetrics(win32con.SM_CYICON)
-        hdc = win32ui.CreateDCFromHandle(win32gui.GetDC(0))
-        hbmp = win32ui.CreateBitmap()
-        hbmp.CreateCompatibleBitmap(hdc, ico_x, ico_y)
-        hdc = hdc.CreateCompatibleDC()
-        hdc.SelectObject(hbmp)
-        hdc.DrawIcon((0, 0), hicon)
-        bmp_info = hbmp.GetInfo()
-        bmp_bytes = hbmp.GetBitmapBits(True)
-        image = Image.frombuffer("RGBA", (bmp_info["bmWidth"], bmp_info["bmHeight"]), bmp_bytes, "raw", "BGRA", 0, 1)
-
-        # 清理资源
-        win32gui.DestroyIcon(hicon)
-        del hdc
-        del hbmp
-        if not os.path.exists(cfg.DESKTOP_ICO_PATH + dir_name):
-            os.makedirs(cfg.DESKTOP_ICO_PATH + dir_name)
-        image.save(cfg.DESKTOP_ICO_PATH + dir_name + "/" + os.path.basename(url_path) + ".webp")
-        image.close()
-        return {"success":True,"ico":cfg.DESKTOP_ICO_RELATIVE_PATH + dir_name + "/" + os.path.basename(url_path) + ".webp"}
-    except Exception as e:
-        print(f"提取图标失败: {e}")
-        return {"success":False,"ico":"./resources/file_icos/exe.png"}
-
-
-def get_shortcut_target(shortcut_path):
-    if not os.path.exists(shortcut_path):
-        raise FileNotFoundError(f"快捷方式文件 {shortcut_path} 不存在")
-
-    shell = win32com.client.Dispatch("WScript.Shell")
-    shortcut = shell.CreateShortcut(shortcut_path)
-    return shortcut.TargetPath
-
-
-def match_ico(file_name):
-    extension = os.path.splitext(file_name)[1]
-    if extension in cfg.FILE_ICO:
-        return cfg.FILE_ICO[extension]
-    elif extension in cfg.SCRIPTS_TYPE:
-        return "./resources/file_icos/script.png"
-    else:
-        return cfg.FILE_ICO["unkonw"]
-
-
 def check_recover(data, match):
     result = False
     for d in data:
@@ -527,39 +323,83 @@ def is_cl(file_path):
     except Exception as e:
         print(f"读取收藏数据失败: {e}")
         return False
+    
+# 排序相关——————————————————
+def find_in_a(a,path):
+    result = None
+    for i in range(len(a)):
+        item = a[i]
+        if item["filePath"] == path:
+            result = item
+            break
+    return result
+
 def merge_lists(a, b):
-    # 插入排序
-    a_filepaths = {item['filePath'] for item in a}
-    items_to_insert = [item for item in b if item['filePath'] not in a_filepaths]
+    # 查找新增项
+    new_items = []
+    for i in range(len(a)):
+        item = a[i]
+        if item["filePath"] not in b:
+            new_items.append({"item":item,"pos":i/len(a)})
+
+    # 删除排序引索不存在的path
+    for i in range(len(b)):
+        item = b[i]
+        if find_in_a(a,item)==None:
+            del b[i]
+            i -= 1
+        if len(b)>=i+1:
+            break
+
+    # 开始排序
+    new_order = []
+    for i in range(len(b)):
+        new_order.append(find_in_a(a,b[i]))
     
-    if not items_to_insert:
-        for i, item in enumerate(a):
-            item['index'] = i
-        return a
-    index_mapping = {item['index']: item for item in a}
-    a_indices = sorted(index_mapping.keys())
-    
-    for item in items_to_insert:
-        target_index = item['index']
-        if target_index in index_mapping:
-            insert_pos = a.index(index_mapping[target_index]) + 1
-            if check_recover(a,item)==False:
-                a.insert(insert_pos, item)
-        else:
-            smaller_indices = [idx for idx in a_indices if idx < target_index]
-            if smaller_indices:
-                max_smaller_index = max(smaller_indices)
-                insert_pos = a.index(index_mapping[max_smaller_index]) + 1
-                if check_recover(a,item)==False:
-                    a.insert(insert_pos, item)
-            else:
-                if check_recover(a,item)==False:
-                    a.insert(0, item)
+    # 插入新项
+    for item in new_items:
+        new_order.insert(int(item["pos"]*len(a)),item["item"])
+
+    return new_order
         
-        index_mapping[item['index']] = item
-        a_indices = sorted(index_mapping.keys())
-    
-    return a
+
+# ————————————————————————————
+
+
+
+def mix_fileInfo(file_path,file_name,ico,ext,real_path=None):
+    file = os.path.basename(file_path)
+    if ext in [".exe",".EXE"]:
+        if real_path!=None:
+            file = os.path.basename(real_path)
+        file_name=os.path.splitext(os.path.basename(file_path))[0]
+    if real_path!=None:
+        if os.path.isdir(real_path):
+            ext = "文件夹"
+            file_path=real_path
+            real_path = None
+    else:
+        if os.path.isdir(file_path):
+            ext = "文件夹"
+    info = {
+        "file": file,
+        "filePath": file_path,
+        "fileName": file_name,
+        "ico": ico,
+        "fileType": ext,
+    }
+    if file_path in config["ico"]:
+        info["edit_ico"]=True
+    if real_path!=None:
+        info["realPath"] = real_path
+    if ext in [".exe",".EXE",".url"]:
+        ft = "exe"
+    elif ext in ["文件夹","dir"]:
+        ft = "dir"
+    else:
+        ft = "file"
+    return {"inf_type":ft,"inf":info}
+
 def update_inf(dir_path,retry_count=0):
     try:
         if dir_path == "/\\":
@@ -581,126 +421,32 @@ def update_inf(dir_path,retry_count=0):
             current_dir = path_list[i]
             for item in os.listdir(current_dir):
                 try:
-                    if "desktop.ini" in item:
+                    if "desktop.ini" == item:
                         continue
-                    filename, _ = os.path.splitext(item)
-                    full_path = os.path.join(current_dir, item)
+                    filename, _ = os.path.splitext(item) # 文件名
+                    full_path = os.path.join(current_dir, item) # 完整路径
+
+                    ico = iconMgr.get_icon(full_path,filename)
                     if os.path.isfile(full_path):
-                        extension = os.path.splitext(full_path)[1]
-                        if ".lnk" == extension or ".exe" == extension or ".EXE" == extension:
-                            if ".lnk" == extension:
-                                target_path = get_shortcut_target(full_path)
-                                extension = os.path.splitext(target_path)[1]
-                            else:
-                                target_path = full_path
-                                extension = os.path.splitext(target_path)[1]
-                            if ".exe" == extension or ".EXE" == extension:
-                                if full_path in loaded_exe_cache:
-                                    exe_icon = loaded_exe_cache[full_path]
-                                else:
-                                    if not target_path in loaded_exe_cache:
-                                        exe_icon = get_shortcut_icon_win32(full_path,item)
-                                        if exe_icon["success"]==False:
-                                            exe_icon = get_url_icon(full_path)
-                                            if exe_icon["success"]==False:
-                                                exe_icon = get_icon(target_path, item)["ico"]
-                                            else:
-                                                exe_icon = exe_icon["ico"]
-                                        else:
-                                            exe_icon = exe_icon["ico"]
-                                    else:
-                                        try_icon = get_shortcut_icon_win32(full_path,item)
-                                        if try_icon["success"]!=False:
-                                            exe_icon = try_icon["ico"]
-                                        else:
-                                            exe_icon = loaded_exe_cache[target_path]
-                                exe_data.append(
-                                    {
-                                        "fileName": filename,
-                                        "fileType": extension,
-                                        "file": os.path.basename(target_path),
-                                        "filePath": full_path,
-                                        "realPath": target_path,
-                                        "ico": exe_icon,
-                                    }
-                                )
-                                continue
-                            elif ".url" == extension:
-                                icon_image = get_url_icon(target_path)["ico"]
-                                exe_data.append(
-                                    {
-                                        "fileName": filename,
-                                        "fileType": extension,
-                                        "file": os.path.basename(full_path),
-                                        "filePath": full_path,
-                                        "ico": icon_image,
-                                        "cl":is_cl(full_path),
-                                    }
-                                )
-                            else:
-                                if os.path.isfile(target_path):
-                                    file_data.append(
-                                        {
-                                            "fileName": filename,
-                                            "fileType": extension,
-                                            "file": item,
-                                            "filePath": target_path,
-                                            "ico": match_ico(item),
-                                        }
-                                    )
-                                else:
-                                    if target_path=="" or target_path==None:
-                                        exe_data.append(
-                                            {
-                                                "fileName": os.path.basename(full_path),
-                                                "fileType": extension,
-                                                "file": item,
-                                                "filePath": full_path,
-                                                "ico":  get_url_icon(full_path)["ico"],
-                                            }
-                                        )
-                                    else:
-                                        dir_data.append(
-                                            {
-                                                "fileName": os.path.basename(full_path),
-                                                "fileType": "文件夹",
-                                                "file": item,
-                                                "filePath": target_path,
-                                                "ico": "./resources/file_icos/dir.png",
-                                            }
-                                        )
-                                continue
-                        elif ".url" == extension:
-                            icon_image = get_url_icon(full_path)["ico"]
-                            exe_data.append(
-                                {
-                                    "fileName": filename,
-                                    "fileType": extension,
-                                    "file": os.path.basename(full_path),
-                                    "filePath": full_path,
-                                    "ico": icon_image,
-                                }
-                            )
-                        else:
-                            file_data.append(
-                                {
-                                    "fileName": filename,
-                                    "fileType": extension,
-                                    "file": item,
-                                    "filePath": full_path,
-                                    "ico": match_ico(item),
-                                }
-                            )
+                        ext = os.path.splitext(full_path)[1]
                     else:
-                        dir_data.append(
-                            {
-                                "fileName": item,
-                                "fileType": "文件夹",
-                                "file": item,
-                                "filePath": full_path,
-                                "ico": "./resources/file_icos/dir.png",
-                            }
-                        )
+                        ext = "dir"
+                    if ext == ".lnk":
+                        real_file = getIcon.get_shortcut_target(full_path)
+                        if os.path.isfile(real_file):
+                            ext = os.path.splitext(real_file)[1]
+                        else:
+                            ext = "dir"
+                        info_data = mix_fileInfo(full_path,os.path.basename(real_file),ico,ext,real_file)
+                    else:
+                        info_data = mix_fileInfo(full_path,filename,ico,ext)
+
+                    if info_data["inf_type"]=="exe":
+                        exe_data.append(info_data["inf"])
+                    elif info_data["inf_type"]=="dir":
+                        dir_data.append(info_data["inf"])
+                    elif info_data["inf_type"]=="file":
+                        file_data.append(info_data["inf"])
                 except:
                     bugs_report(
                         "python-update_inf_item",
@@ -741,7 +487,7 @@ def update_inf(dir_path,retry_count=0):
             # 先去从排序列表中删除无效项目
             r_index = 0
             while r_index < len(this_order):
-                this_path = this_order[r_index]["filePath"]
+                this_path = this_order[r_index]
                 had_found = False
                 for item in out_data:
                     if item["filePath"] == this_path:
@@ -753,7 +499,7 @@ def update_inf(dir_path,retry_count=0):
                     r_index += 1
         # 再插入排序
             order_data = this_order
-            out_data = merge_lists(order_data, out_data)
+            out_data = merge_lists(out_data, order_data)
 
         # 重复监测
         try:
@@ -792,7 +538,6 @@ def update_inf(dir_path,retry_count=0):
         # 编号写入
         for i, item in enumerate(out_data):
             item['index'] = i
-
         return out_data
     except:
         bugs_report(
@@ -1302,6 +1047,10 @@ def get_window_inf(title=cfg.DEFAULT_WINDOW_TITLE):
     end_x, end_y = get_targetPos(width, height)
     return width, height, end_x, end_y
 
+def get_desktop_path():
+    shell = win32com.client.Dispatch("WScript.Shell")
+    return shell.SpecialFolders("Desktop")
+
 
 desktop_path = get_desktop_path()
 public_desktop = os.path.join(os.environ["PUBLIC"], "Desktop")
@@ -1424,7 +1173,11 @@ class AppAPI:
 
     def update_config_order(self,path,order):
         global config
-        config["dir_order"][path]=order
+
+        path_order = []
+        for item in order:
+            path_order.append(item["filePath"])
+        config["dir_order"][path]=path_order
         json.dump(config, open("config.json", "w"))
 
     def search_desktop_path(self):
@@ -1552,14 +1305,6 @@ class AppAPI:
         )
         fullscreen_close = True
         return {"success": True}
-
-    def open_mhyGame(self, file_path, game):
-        """打开米哈游游戏"""
-        try:
-            os.startfile(file_path)
-            return {"success": True}
-        except Exception as e:
-            return {"success": False, "message": f"无法打开游戏: {str(e)}"}
 
     def copy_file(self, file_path):
         subprocess.run(
@@ -1851,6 +1596,52 @@ class AppAPI:
         return move_type
     def get_version(self):
         return {"success":True,"version":cfg.APP_VERSION}
+
+    def select_image(self):
+        global ignore_action
+        ignore_action=True
+        file_types = ('Image Files (*.png;*.jpg;*.gif;*.jpeg;*.webp)', 'All files (*.*)')
+
+        result = window.create_file_dialog(
+            webview.OPEN_DIALOG, allow_multiple=False, file_types=file_types
+        )
+        if result !=None:
+            ext = os.path.splitext(result[0])[1]
+            if ext.lower() not in ['.png', '.jpg', '.jpeg', '.gif', '.webp','.ico','.PNG','.JPG','.JPEG','.GIF','.WEBP']:
+                result = None
+                msgbox("请选择图片文件！", "文件类型错误")
+        ignore_action=False
+        return result
+    
+    def setIcon(self,file_path,icon_select=False):
+        global config
+        if icon_select==False:
+            if file_path in config["ico"]:
+                if os.path.exists(config["ico"][file_path]):
+                    os.remove(config["ico"][file_path])
+                del config["ico"][file_path]
+                json.dump(config,open("config.json","w"))
+            return {"success":True}
+        else:
+            icon_path = self.select_image()
+            if icon_path == None:
+                return {"success":False,"message":"未选择图标"}
+            icon_path = icon_path[0]
+            if not os.path.exists(icon_path):
+                return {"success":False,"message":"图标文件不存在"}
+            if not os.path.exists(cfg.ICON_SET_PATH):
+                os.mkdir(cfg.ICON_SET_PATH)
+            new_iconPath = os.path.join(cfg.ICON_SET_PATH,os.path.basename(icon_path))
+            shutil.copy(icon_path, new_iconPath)
+            # 删除旧图标
+            if file_path in config["ico"]:
+                if os.path.exists(config["ico"][file_path]):
+                    os.remove(config["ico"][file_path])
+            # 保存新图标
+            config["ico"][file_path] = os.path.join("icon_set",os.path.basename(icon_path))
+            json.dump(config,open("config.json","w"))
+            return {"success":True}
+
 
 
 webview.settings["ALLOW_FILE_URLS"] = True

@@ -16,6 +16,68 @@ import json
 import win32com
 progressbar=""
 
+
+class userFileUpdateMgr:
+    def __init__(self,install_path):
+        self.install_path = install_path
+        self.userFiles = [
+            "config.json",
+            "cl_data.json",
+            "user_class.json",
+            "_internal/icon_set"
+        ]
+        if os.path.exists(os.path.join(install_path,"config.json")):
+            self.user_config = json.load(open(os.path.join(install_path,"config.json"),"r",encoding="utf-8"))
+            if self.user_config["use_bg"]==True:
+                self.userFiles.append(os.path.join("_internal",self.user_config["bg"]))
+        self.tempPath = os.environ.get('LOCALAPPDATA')
+        if os.path.exists(os.path.join(self.tempPath,"easydesktop_user_files")):
+            shutil.rmtree(os.path.join(self.tempPath,"easydesktop_user_files"))
+        os.makedirs(os.path.join(self.tempPath,"easydesktop_user_files"))
+        os.makedirs(os.path.join(self.tempPath,"easydesktop_user_files","_internal"))
+
+    def backup_userFile(self):
+        for file in self.userFiles:
+            if os.path.exists(os.path.join(self.install_path,file)):
+                if os.path.isfile(os.path.join(self.install_path,file)):
+                    shutil.copy2(os.path.join(self.install_path,file),os.path.join(self.tempPath,"easydesktop_user_files",file))
+                else:
+                    shutil.copytree(os.path.join(self.install_path,file),os.path.join(self.tempPath,"easydesktop_user_files",file))
+    def restore_userFile(self):
+        for file in self.userFiles:
+            if os.path.exists(os.path.join(self.tempPath,"easydesktop_user_files",file)):
+                if os.path.isfile(os.path.join(self.tempPath,"easydesktop_user_files",file)):
+                    shutil.copy2(os.path.join(self.tempPath,"easydesktop_user_files",file),os.path.join(self.install_path,file))
+                else:
+                    if os.path.exists(os.path.join(self.install_path,file)):
+                        shutil.rmtree(os.path.join(self.install_path,file))
+                    shutil.copytree(os.path.join(self.tempPath,"easydesktop_user_files",file),os.path.join(self.install_path,file))
+        shutil.rmtree(os.path.join(self.tempPath,"easydesktop_user_files"))
+    
+    def update_230(self):
+        config = json.load(open(os.path.join(self.install_path,"config.json"),"r",encoding="utf-8"))
+        for path_key in config["dir_order"]:
+            if len(config["dir_order"][path_key])==0:
+                continue
+            if isinstance(config["dir_order"][path_key][0],dict):
+                order_list = []
+                for item in config["dir_order"][path_key]:
+                    order_list.append(item["filePath"])
+                config["dir_order"][path_key] = order_list
+        json.dump(config, open(os.path.join(self.install_path,"config.json"),"w",encoding="utf-8"))
+    def updateAction(self):
+        actions = {
+            230:self.update_230,
+        }
+        version = self.user_config["version"] if "version" in self.user_config else "0.0.0"
+        version = int(version.replace(".",""))
+        for v in actions:
+            if v <= version:
+                continue
+            actions[v]()
+
+userFile_mgr = None
+
 def get_desktop_path():
     shell = win32com.client.Dispatch("WScript.Shell")
     return shell.SpecialFolders("Desktop")
@@ -182,116 +244,122 @@ def un_install():
     #     download_inf_var.set("卸载失败")
 def install():
     global download_inf_var,install_started,progressbar
-    try:
-        if os.path.exists(os.path.join(install_path,"config.json")):
-            user_config = json.load(open(os.path.join(install_path,"config.json"),"r",encoding="utf-8"))
-        else:
-            user_config = None
-        if os.path.exists(os.path.join(install_path,"cl_data.json")):
-            cl_data = json.load(open(os.path.join(install_path,"cl_data.json"),"r",encoding="utf-8"))
-        else:
-            cl_data = None
-        if os.path.exists(os.path.join(install_path,"user_class.json")):
-            user_class = json.load(open(os.path.join(install_path,"user_class.json"),"r",encoding="utf-8"))
-        else:
-            user_class = None
-        copy_bg=False
-        if user_config!=None:
-            if user_config["use_bg"]==True:
-                if os.path.exists(os.path.join(install_path,user_config["bg"])):
-                    try:
-                        shutil.copy2(os.path.join(install_path,user_config["bg"]),user_config["bg"])
-                        copy_bg=True
-                    except:
-                        pass
-        progressbar["mode"]="indeterminate"
-        progressbar["orient"]=tkinter.HORIZONTAL
-        if os.listdir(install_path)!=[]:
-            download_inf_var.set("正在删除文件")
-            exe_list = ["easyDesktop.exe"]
-            for exe in exe_list:
-                if judgeprocess(exe)==True:
-                    os.popen("taskkill /F /im "+exe)
-                    download_inf_var.set("正在删除文件 停止进程"+exe)
-                    while True:
-                        if judgeprocess(exe)==False:
-                            break
-                        sleep(0.5)
-                
-            download_inf_var.set("正在删除文件")
-            un_delDir_list=["wallpaper","plug","char"]
-            for filename in os.listdir(install_path):
-                file_path = os.path.join(install_path, filename)
-                if os.path.isfile(file_path):
-                    if not ".json" in file_path:
-                        os.remove(file_path)
-                        download_inf_var.set("正在删除: "+file_path)
-                else:
-                    can_del_s = False
-                    for dir in un_delDir_list:
-                        if dir in file_path:
-                            can_del_s=True
-                            break
-                    if can_del_s==True:
-                        shutil.rmtree(file_path)
-                        download_inf_var.set("正在删除文件夹: "+file_path)
-            # shutil.rmtree(install_path)
-            # print("正在删除目录："+install_path)
-            # os.makedirs(install_path)
+    # try:
 
-        progressbar["mode"]="determinate"
-        filename = resource_path(os.path.join("res","easydesktop.zip"))
-        download_inf_var.set("正在解压文件")
-        with zipfile.ZipFile(filename, 'r') as zip_ref:
-            total_files = len(zip_ref.infolist())
-            extracted_files = 0
-            for file in zip_ref.infolist():
-                extracted_files += 1
-                if not os.path.exists(file.filename):
-                    zip_ref.extract(file, install_path)
-                progress = (extracted_files / total_files) * 100
-                progress_num = int(progress)
-                progressbar['value']=int(progress_num)
-                download_inf_var.set("正在解压文件 "+str('[解压进度]: '+str(progress_num)+"%"))
-                # print(f"Extracting: {file.filename} - Progress: {progress:.2f}%")
-            # zip_ref.extractall(install_path)
+    uf_mgr = userFileUpdateMgr(install_path)
+    uf_mgr.backup_userFile()
 
-        download_inf_var.set("正在写入注册表")
-        # Windows 注册表
-        with winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Software\easydesktop") as key:
-            winreg.SetValueEx(key, "InstallPath", 0, winreg.REG_SZ, install_path)
-        download_inf_var.set("正在创建快捷方式")
+    # if os.path.exists(os.path.join(install_path,"config.json")):
+    #     user_config = json.load(open(os.path.join(install_path,"config.json"),"r",encoding="utf-8"))
+    # else:
+    #     user_config = None
+    # if os.path.exists(os.path.join(install_path,"cl_data.json")):
+    #     cl_data = json.load(open(os.path.join(install_path,"cl_data.json"),"r",encoding="utf-8"))
+    # else:
+    #     cl_data = None
+    # if os.path.exists(os.path.join(install_path,"user_class.json")):
+    #     user_class = json.load(open(os.path.join(install_path,"user_class.json"),"r",encoding="utf-8"))
+    # else:
+    #     user_class = None
+    # copy_bg=False
+    # if user_config!=None:
+    #     if user_config["use_bg"]==True:
+    #         if os.path.exists(os.path.join(install_path,user_config["bg"])):
+    #             try:
+    #                 shutil.copy2(os.path.join(install_path,user_config["bg"]),user_config["bg"])
+    #                 copy_bg=True
+    #             except:
+    #                 pass
+    progressbar["mode"]="indeterminate"
+    progressbar["orient"]=tkinter.HORIZONTAL
+    if os.listdir(install_path)!=[]:
+        download_inf_var.set("正在删除文件")
+        exe_list = ["easyDesktop.exe"]
+        for exe in exe_list:
+            if judgeprocess(exe)==True:
+                os.popen("taskkill /F /im "+exe)
+                download_inf_var.set("正在删除文件 停止进程"+exe)
+                while True:
+                    if judgeprocess(exe)==False:
+                        break
+                    sleep(0.5)
+            
+        download_inf_var.set("正在删除文件")
+        un_delDir_list=["wallpaper","plug","char"]
+        for filename in os.listdir(install_path):
+            file_path = os.path.join(install_path, filename)
+            if os.path.isfile(file_path):
+                if not ".json" in file_path:
+                    os.remove(file_path)
+                    download_inf_var.set("正在删除: "+file_path)
+            else:
+                can_del_s = False
+                for dir in un_delDir_list:
+                    if dir in file_path:
+                        can_del_s=True
+                        break
+                if can_del_s==True:
+                    shutil.rmtree(file_path)
+                    download_inf_var.set("正在删除文件夹: "+file_path)
+        # shutil.rmtree(install_path)
+        # print("正在删除目录："+install_path)
+        # os.makedirs(install_path)
 
-        pythoncom.CoInitialize()
-        if os.path.exists(os.path.join(os.path.expanduser("~"), "Desktop","EasyDesktop.lnk")):
-            os.remove(os.path.join(os.path.expanduser("~"), "Desktop","EasyDesktop.lnk"))
-        desktop_path = get_desktop_path()
-        target_path = os.path.join(install_path,"easyDesktop.exe")
-        shortcut_path = os.path.join(desktop_path, 'EasyDesktop.lnk')
-        create_shortcut(target_path, shortcut_path,install_path)
-        pythoncom.CoUninitialize()
+    progressbar["mode"]="determinate"
+    filename = resource_path(os.path.join("res","easydesktop.zip"))
+    download_inf_var.set("正在解压文件")
+    with zipfile.ZipFile(filename, 'r') as zip_ref:
+        total_files = len(zip_ref.infolist())
+        extracted_files = 0
+        for file in zip_ref.infolist():
+            extracted_files += 1
+            if not os.path.exists(file.filename):
+                zip_ref.extract(file, install_path)
+            progress = (extracted_files / total_files) * 100
+            progress_num = int(progress)
+            progressbar['value']=int(progress_num)
+            download_inf_var.set("正在解压文件 "+str('[解压进度]: '+str(progress_num)+"%"))
+            # print(f"Extracting: {file.filename} - Progress: {progress:.2f}%")
+        # zip_ref.extractall(install_path)
 
-        try:
-            if user_config!=None:
-                json.dump(user_config, open(os.path.join(install_path,"config.json"),"w",encoding="utf-8"))
-            if cl_data!=None:
-                json.dump(cl_data, open(os.path.join(install_path,"cl_data.json"),"w",encoding="utf-8"))
-            if user_class!=None:
-                json.dump(user_class, open(os.path.join(install_path,"user_class.json"),"w",encoding="utf-8"))
-            if copy_bg==True:
-                shutil.copy2(user_config["bg"],os.path.join(install_path,user_config["bg"]))
-                os.remove(user_config["bg"])
-        except Exception as e:
-            print(e)
+    download_inf_var.set("正在写入注册表")
+    # Windows 注册表
+    with winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Software\easydesktop") as key:
+        winreg.SetValueEx(key, "InstallPath", 0, winreg.REG_SZ, install_path)
+    download_inf_var.set("正在创建快捷方式")
 
-        download_inf_var.set("完成")
-        install_started=False
-        show_finish()
-    except PermissionError:
-        messagebox.showerror("EasyDesktop - 安装时出现错误","权限不足，无法在当前位置安装")
-        install_started=False
-    except Exception as e:
-        messagebox.showerror("EasyDesktop - 安装时出现错误",e)
+    pythoncom.CoInitialize()
+    if os.path.exists(os.path.join(os.path.expanduser("~"), "Desktop","EasyDesktop.lnk")):
+        os.remove(os.path.join(os.path.expanduser("~"), "Desktop","EasyDesktop.lnk"))
+    desktop_path = get_desktop_path()
+    target_path = os.path.join(install_path,"easyDesktop.exe")
+    shortcut_path = os.path.join(desktop_path, 'EasyDesktop.lnk')
+    create_shortcut(target_path, shortcut_path,install_path)
+    pythoncom.CoUninitialize()
+
+    # try:
+    #     if user_config!=None:
+    #         json.dump(user_config, open(os.path.join(install_path,"config.json"),"w",encoding="utf-8"))
+    #     if cl_data!=None:
+    #         json.dump(cl_data, open(os.path.join(install_path,"cl_data.json"),"w",encoding="utf-8"))
+    #     if user_class!=None:
+    #         json.dump(user_class, open(os.path.join(install_path,"user_class.json"),"w",encoding="utf-8"))
+    #     if copy_bg==True:
+    #         shutil.copy2(user_config["bg"],os.path.join(install_path,user_config["bg"]))
+    #         os.remove(user_config["bg"])
+    # except Exception as e:
+    #     print(e)
+    uf_mgr.restore_userFile()
+    uf_mgr.updateAction()
+
+    download_inf_var.set("完成")
+    install_started=False
+    show_finish()
+    # except PermissionError:
+    #     messagebox.showerror("EasyDesktop - 安装时出现错误","权限不足，无法在当前位置安装")
+    #     install_started=False
+    # except Exception as e:
+    #     messagebox.showerror("EasyDesktop - 安装时出现错误",e)
     install_started=False
 def out():
     window.quit()
@@ -441,6 +509,7 @@ if check_registry_key()!=None:
 start_btn.pack(pady=5)
 if check_registry_key()!=None:
     uninstall_btn.pack(pady=5)
+
 
 # 添加底部版权信息
 copyright_label = tkinter.Label(main_frame, text="EasyDesktop © 2025     Made by CodeVicent", 
