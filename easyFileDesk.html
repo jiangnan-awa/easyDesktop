@@ -99,7 +99,7 @@
 
         .file-selection-item {
             display: flex;
-            alignItems: center;
+            align-items: center;
             padding: 10px;
             border-radius: 8px;
             transition: background-color 0.2s;
@@ -139,7 +139,7 @@
             border-radius: 6px;
             border: none;
             cursor: pointer;
-            fontSize: 14px;
+            font-size: 14px;
         }
 
         .file-selection-btn.confirm {
@@ -918,6 +918,23 @@
                 <button class="modal-btn cancel-btn" id="cancelBtn">取消</button>
             </div>
         </div>
+    </div>
+    <style>
+        .message_box {
+            position: fixed;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+        }
+
+    </style>
+    <div class="message_box">
+        <p id="err_message"></p>
     </div>
 </body>
 <script src="/resources/ed.js"></script>

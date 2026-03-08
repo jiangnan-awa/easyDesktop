@@ -120,7 +120,7 @@ def get_icon(exe_path, name):
                 print(f"图标转换失败，使用默认图标: {exe_path}")
                 return None
         except Exception as extract_error:
-            print(f"图标提取失败: {extract_error} - {exe_path}")
+            print(f"exe图标提取失败: {extract_error} - {exe_path}")
             return None
 
     except Exception as e:
@@ -129,10 +129,9 @@ def get_icon(exe_path, name):
 
 
 def get_url_icon(url_path):
-    if not ".lnk" in url_path:
-        return get_icon(url_path,os.path.basename(url_path))  
-    # print(url_path)
+    print("new "+url_path)
     dir_name = os.path.dirname(url_path).replace("/", "-").replace(R"\\", "-").replace(":", "-")
+
     # 解析 .url 文件
     icon_file = None
     icon_index = 0
@@ -274,7 +273,6 @@ def get_file_icon_path(file_path):
         return icon_path
         
     except Exception as e:
-        print(f"获取文件图标失败: {e}")
         return None
     
 def get_fileIcon(file_path):

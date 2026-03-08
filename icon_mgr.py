@@ -19,10 +19,9 @@ class icon_mgr():
             self.save_cache(file_path,icon_r)
             return icon_r
         else:
-            print("moren")
             return cfg.DEFAULT_EXE_ICON
     def icon_url(self,file_path,file_name):
-        icon_r = getIcon.get_url_icon(file_path,file_name)
+        icon_r = getIcon.get_url_icon(file_path)
         if icon_r!=None:
             self.save_cache(file_path,icon_r)
             return icon_r
@@ -31,6 +30,8 @@ class icon_mgr():
             return cfg.DEFAULT_UNKONW_ICON
 
     def get_icon(self,file_path,file_name):
+        if ".url" in file_path:
+            print(file_path)
         # 从缓存中获取
         if file_path in self.icon_cache:
             return self.icon_cache[file_path]

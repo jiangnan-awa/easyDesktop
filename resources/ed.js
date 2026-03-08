@@ -11,7 +11,8 @@ const CONSTANTS = {
         'mp4': '视频', 'mp3': '音频',
         'psd': '设计稿', 'fig': '设计稿',
         'sql': '数据库', 'json': '配置文件',
-        'zip': '压缩文件', 'exe': '应用程序'
+        'zip': '压缩文件', 'exe': '应用程序',
+        'SteamGame':"Steam游戏"
     },
 
     THEME_PATHS: {
@@ -31,7 +32,9 @@ const Utils = {
      * 获取文件类型显示名称
      */
     getFileType(fileName, fileType) {
-        if (fileType === '文件夹') return '文件夹';
+        if (fileType == '文件夹') return '文件夹';
+        if (fileType == 'SteamGame') return 'Steam游戏';
+        console.log(fileType)
 
         const ext = fileName.split('.').pop().toLowerCase();
         if (CONSTANTS.SCRIPT_TYPES.includes(ext)) {
@@ -157,7 +160,8 @@ const DOMCache = {
 // ========== API调用封装 ==========
 const ApiHelper = {
     async call(method, ...args) {
-        return await window.pywebview.api[method](...args);
+        var result = await window.pywebview.api[method](...args);
+        return result;
     },
 
     async getConfig() {
@@ -893,8 +897,6 @@ const EventManager = {
     initDialogEvents() {
         // 重命名对话框
         DOMCache.get('renameCancel').addEventListener('click', () => {
-            if (AppState.dealing) return;
-            AppState.dealing = true;
             ApiHelper.call('unlock_window_visibility');
             DOMCache.get('renameOverlay').style.display = 'none';
             AppState.dealing = false;
@@ -903,13 +905,19 @@ const EventManager = {
         DOMCache.get('renameConfirm').addEventListener('click', async () => {
             if (AppState.dealing) return;
             AppState.dealing = true;
-            ApiHelper.call('unlock_window_visibility');
+            try{
+                ApiHelper.call('unlock_window_visibility');
 
-            const newName = DOMCache.get('renameInput').value.trim();
-            if (newName) {
-                await FileOperationManager.renameFile(AppState.selectedFile.filePath, newName);
-                DOMCache.get('renameOverlay').style.display = 'none';
-            }
+                const newName = DOMCache.get('renameInput').value.trim();
+                if (newName) {
+                    try{
+                        await FileOperationManager.renameFile(AppState.selectedFile.filePath, newName);
+                        DOMCache.get('renameOverlay').style.display = 'none';
+                    }catch(e){
+                        UIUtils.showError(e);
+                    }
+                }
+            }catch(e){}
             AppState.dealing = false;
         });
 

@@ -34,7 +34,8 @@ import base64
 import io
 from window_effect import WindowEffect,set_window_rounded_corners
 import kb_tool
-keyboard_monitor = kb_tool.KeyboardMonitor()
+import configparser
+# keyboard_monitor = kb_tool.KeyboardMonitor()
 def activate_existing_instance():
     """激活已存在的实例"""
     try:
@@ -287,22 +288,21 @@ def hotKey_outAction():
 def hotkey_detect():
     while True:
         time.sleep(0.1)
-        kb_list = keyboard_monitor.get_pressed_keys()
         if config["cf_type"]=="2":
-            if "windows" in kb_list and "shift" in kb_list and len(kb_list)==2:
+            if keyboard.is_pressed('left windows') and keyboard.is_pressed('shift'):
                 hotKey_outAction()
                 keyboard.read_key()
         if config["cf_type"]=="3":
-            if "windows" in kb_list and "`" in kb_list and len(kb_list)==2:
+            if keyboard.is_pressed('left windows') and keyboard.is_pressed('`'):
                 hotKey_outAction()
                 keyboard.read_key()
         if config["cf_type"]=="4":
             hk = config["cf_hotkey"].split("+")
             ok = 0
             for i in range(len(hk)):
-                if hk[i] in kb_list:
+                if keyboard.is_pressed(hk[i]):
                     ok += 1
-            if ok == len(hk) and len(kb_list)==len(hk):
+            if ok == len(hk):
                 hotKey_outAction()
                 keyboard.read_key()
 
@@ -366,7 +366,25 @@ def merge_lists(a, b):
 # ————————————————————————————
 
 
-
+def get_url_from_url_file(file_path):
+    """
+    从.url文件中提取URL
+    """
+    config = configparser.ConfigParser()
+    
+    try:
+        # 读取.url文件
+        config.read(file_path)
+        
+        # 获取URL（通常在[InternetShortcut]部分的URL字段）
+        url = config.get('InternetShortcut', 'URL')
+        return url
+    except (configparser.NoSectionError, configparser.NoOptionError) as e:
+        print(f"解析文件时出错: {e}")
+        return None
+    except Exception as e:
+        print(f"读取文件时出错: {e}")
+        return None
 def mix_fileInfo(file_path,file_name,ico,ext,real_path=None):
     file = os.path.basename(file_path)
     if ext in [".exe",".EXE"]:
@@ -392,7 +410,12 @@ def mix_fileInfo(file_path,file_name,ico,ext,real_path=None):
         info["edit_ico"]=True
     if real_path!=None:
         info["realPath"] = real_path
+    if ext == ".url":
+        url = get_url_from_url_file(file_path)
+        if "steam://rungameid" in url:
+            info["fileType"] = "SteamGame"
     if ext in [".exe",".EXE",".url"]:
+        # print(file_path)
         ft = "exe"
     elif ext in ["文件夹","dir"]:
         ft = "dir"
@@ -410,6 +433,12 @@ def update_inf(dir_path,retry_count=0):
         exe_data = []
         dir_data = []
         file_data = []
+
+        if not dir_path in ["desktop",r"/\\","","/"]:
+            if not os.path.exists(dir_path):
+                dir_path = "desktop"
+                update_config("df_dir", dir_path)
+                window.evaluate_js('UIUtils.showError("自定义目录不存在，已自动切换到桌面")')
 
         if dir_path == "desktop":
             get_count = 2
@@ -721,7 +750,7 @@ def animate_window(
     delay = 0.25 / steps  # 总时长250ms
     
     for x, y, w, h in positions:
-        win32gui.MoveWindow(hwnd, x, y, w, h, True)
+        win32gui.MoveWindow(hwnd, x, y, w, h, False)
         time.sleep(delay)
     # WindowEffect().resetEffect(hwnd)
 
@@ -774,7 +803,10 @@ def out_window():
     moving = True
     window_state = True
     window.evaluate_js("document.getElementById('themeSettingsPanel').style.display='none';enableScroll();")
-    if config["full_screen"] == False:
+    if config["full_screen"] == True:
+        w,h = get_screen_size()
+        window.resize(w, h)
+    else:
         window.resize(config["width"], config["height"])
     hwnd = win32gui.FindWindow(None, cfg.DEFAULT_WINDOW_TITLE)
     if not hwnd:
@@ -928,8 +960,9 @@ def on_loaded():
     hwnd = win32gui.FindWindow(None, cfg.DEFAULT_WINDOW_TITLE)
     hide_from_taskbar(window)
     set_blur(config["blur_bg"])
-    end_x, end_y = get_targetPos(config['width'],config['height'])
-    win32gui.MoveWindow(hwnd, end_x, end_y, config['width'], config['height'], True)
+
+    win_width,win_height,px,py = get_windowCurrentTargetPos()
+    win32gui.MoveWindow(hwnd, px, py, win_width, win_height, True)
     sys_theme()
     if config["view"] == "list":
         window.evaluate_js("list_view()")
@@ -991,7 +1024,9 @@ def update_config(part, data):
             time.sleep(1)
             ignore_action = False
         else:
+            window.hide()
             win32gui.MoveWindow(hwnd, 0, 0, screen_width, screen_height, True)
+            window.show()
     if part == "show_sysApp":
         window.evaluate_js("document.getElementById('b2d').click();fit_btnBar();")
     if part == "cf_hotkey":
@@ -1645,12 +1680,20 @@ class AppAPI:
 
 
 webview.settings["ALLOW_FILE_URLS"] = True
-px,py = get_targetPos(config["width"],config["height"])
+def get_windowCurrentTargetPos():
+    px,py = get_targetPos(config["width"],config["height"])
+    if config["full_screen"]==True:
+        win_width,win_height = get_screen_size()
+        px,py = 0,0
+    else:
+        win_width,win_height = config["width"],config["height"]
+    return win_width,win_height,px,py
+win_width,win_height,px,py = get_windowCurrentTargetPos()
 window = webview.create_window(
     cfg.DEFAULT_WINDOW_TITLE,
     "easyFileDesk.html",
-    width=config["width"],
-    height=config["height"],
+    width=win_width,
+    height=win_height,
     x=px,y=py,
     js_api=AppAPI(),
     confirm_close=False,
