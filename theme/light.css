@@ -320,3 +320,31 @@ input:checked + .slider {
     color: white;
     box-shadow: 0 0 5px rgba(93, 173, 226, 0.5);
 }
+
+/* 应用组 */
+.file-group-item .group-icon-grid {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.file-group-item .group-icon-grid .group-icon-empty {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.file-group-item .group-badge {
+    background: #3498db;
+    color: white;
+}
+
+.group-view-overlay {
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.group-view-container {
+    background: white;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.group-view-header {
+    color: #2c3e50;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
