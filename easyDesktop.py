@@ -1811,7 +1811,7 @@ window = webview.create_window(
     hidden=True,
     easy_drag=False,
     resizable=False,
-    transparent=True,
+    transparent=False, # pywebview的透明功能在windows上运行会出现问题
     on_top=True,
 )
 webview.start(func=on_loaded)
