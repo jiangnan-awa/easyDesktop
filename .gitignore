@@ -38,8 +38,6 @@ error*.log/
 .cursor/
 .claude/
 CLAUDE.md
-.agent/
-AGENTS.md
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
