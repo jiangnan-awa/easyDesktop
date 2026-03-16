@@ -1705,4 +1705,4 @@ window = webview.create_window(
     transparent=True,
     on_top=True,
 )
-webview.start(func=on_loaded)
+webview.start(func=on_loaded,debug=True)

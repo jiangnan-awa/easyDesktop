@@ -279,8 +279,8 @@
                     </div>
                 </div>
                 <div class="view-toggle">
-                    <button id="gridViewBtn" class="view-btn active"><i class="fas fa-th-large"></i></button>
-                    <button id="listViewBtn" class="view-btn"><i class="fas fa-list"></i></button>
+                    <button id="displayToggleBtn" class="view-btn active"><i class="fas fa-th-large"></i></button>
+                    <button id="plug_btn" class="view-btn"><i class="fas fa fa-laptop"></i></button>
                 </div>
                 <button id="settingsBtn" class="settings-btn"><i class="fas fa-cog"></i></button>
             </div>
@@ -667,6 +667,15 @@
                     <label id="sc_input">缩放比例：</label>
                     <input type="range" style="width: 100%;" id="sc_slider" class="sc-slider" min="40" max="120"
                         value="100">
+                </div>
+                <div class="settings-section">
+                    <div class="system-theme-toggle">
+                        <span>双击项目的操作</span>
+                        <select class="cf_type_toggle" id="dbc_action_toggle">
+                            <option value="1">打开项目所在文件夹</option>
+                            <option value="2">打开项目</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="settings-section" style="display: flex;">
                     <span>默认文件夹</span>

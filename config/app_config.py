@@ -181,7 +181,8 @@ def get_default_config(width, height):
         'blur_effect':30,
         "dir_order":{},
         "class_order":[],
-        "ico":{}
+        "ico":{},
+        "dbc_action":"1"
     }
 
 # ===== 系统应用程序配置 =====

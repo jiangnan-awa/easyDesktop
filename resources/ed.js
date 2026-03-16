@@ -25,6 +25,25 @@ const CONSTANTS = {
     REMIND_DURATION: 1000,
     ERROR_DISPLAY_TIME: 5000
 };
+// ========== 显示模式管理 ==========
+const DisplayModeManager = {
+    mode:"grid",
+    btn:document.getElementById("displayToggleBtn"),
+    async toggleDisplayMode(){
+        if (this.mode == "grid") {
+            this.mode = "list";
+            this.btn.innerHTML = '<i class="fas fa-th"></i>';
+            EventManager.switchToGridView();
+            await ApiHelper.updateConfig("view", "block");
+        } else {
+            this.mode = "grid";
+            this.btn.innerHTML = '<i class="fas fa-list"></i>';
+            EventManager.switchToListView();
+            await ApiHelper.updateConfig("view", "list");
+        }
+    }
+    
+}
 
 // ========== 工具函数模块 ==========
 const Utils = {
@@ -34,7 +53,7 @@ const Utils = {
     getFileType(fileName, fileType) {
         if (fileType == '文件夹') return '文件夹';
         if (fileType == 'SteamGame') return 'Steam游戏';
-        console.log(fileType)
+        // console.log(fileType)
 
         const ext = fileName.split('.').pop().toLowerCase();
         if (CONSTANTS.SCRIPT_TYPES.includes(ext)) {
@@ -481,7 +500,11 @@ class FileRenderer {
     handleFileAction(file, isDoubleClick) {
         if (file.fileType === '文件夹') {
             if (isDoubleClick) {
-                ApiHelper.openFile(file.filePath);
+                if(config["dbc_action"]=="1"){
+                    ApiHelper.openFile(file.filePath);
+                }else{
+                    NavigationManager.navigateTo(file.filePath);
+                }
             } else {
                 NavigationManager.navigateTo(file.filePath);
             }
@@ -489,7 +512,11 @@ class FileRenderer {
             ApiHelper.call('open_sysApp', file.filePath);
         } else {
             if (isDoubleClick) {
-                ApiHelper.showFile(file.filePath);
+                if(config["dbc_action"]=="1"){
+                    ApiHelper.showFile(file.filePath);
+                }else{
+                    ApiHelper.openFile(file.filePath);
+                }
             } else {
                 ApiHelper.openFile(file.filePath);
             }
@@ -813,29 +840,28 @@ const EventManager = {
     },
 
     initViewToggle() {
-        DOMCache.get('gridViewBtn').addEventListener('click', async () => {
-            this.switchToGridView();
-            await ApiHelper.updateConfig("view", "block");
+        DOMCache.get('displayToggleBtn').addEventListener('click', async () => {
+            DisplayModeManager.toggleDisplayMode();
         });
 
-        DOMCache.get('listViewBtn').addEventListener('click', async () => {
-            this.switchToListView();
-            await ApiHelper.updateConfig("view", "list");
-        });
+        // DOMCache.get('listViewBtn').addEventListener('click', async () => {
+        //     this.switchToListView();
+        //     await ApiHelper.updateConfig("view", "list");
+        // });
     },
 
     switchToGridView() {
         DOMCache.get('filesContainer').style.display = 'grid';
         DOMCache.get('filesListContainer').style.display = 'none';
-        DOMCache.get('gridViewBtn').classList.add('active');
-        DOMCache.get('listViewBtn').classList.remove('active');
+        // DOMCache.get('gridViewBtn').classList.add('active');
+        // DOMCache.get('listViewBtn').classList.remove('active');
     },
 
     switchToListView() {
         DOMCache.get('filesContainer').style.display = 'none';
         DOMCache.get('filesListContainer').style.display = 'block';
-        DOMCache.get('gridViewBtn').classList.remove('active');
-        DOMCache.get('listViewBtn').classList.add('active');
+        // DOMCache.get('gridViewBtn').classList.remove('active');
+        // DOMCache.get('listViewBtn').classList.add('active');
     },
 
     initSearchEvents() {
@@ -1050,6 +1076,9 @@ const EventManager = {
         });
         DOMCache.get("outPos_toggle").addEventListener('change', function () {
             ApiHelper.updateConfig('outPos', this.value);
+        });
+        DOMCache.get("dbc_action_toggle").addEventListener('change', function () {
+            ApiHelper.updateConfig('dbc_action', this.value);
         });
         DOMCache.get("bgType_toggle").addEventListener('change', function () {
             ApiHelper.updateConfig('bgType', this.value);
@@ -1913,6 +1942,7 @@ window.addEventListener('pywebviewready', async function () {
             DOMCache.get('cf_type_toggle').value = config.cf_type;
             DOMCache.get('out_cf_type_toggle').value = config.out_cf_type;
             DOMCache.get('outPos_toggle').value = config.outPos;
+            DOMCache.get('dbc_action_toggle').value = config.dbc_action;
             DOMCache.get("bgType_toggle").value = config.bgType;
             DOMCache.get("themeChangeType_toggle").value = config.themeChangeType;
             // EventManager.updateThemeCardInteraction();
@@ -2165,7 +2195,7 @@ async function detect_posMove(){
                 move_ctn(-200)
             },50)
         }
-    }else{
+    }else{ 
         if(pos_move_pc!=null){
             clearInterval(pos_move_pc)
             pos_move_pc = null
