@@ -501,12 +501,10 @@ def update_inf(dir_path,retry_count=0):
                 index+=1
                 out_data.append(item)
 
-        # 应用组：过滤已编组文件，注入组项目
-        group_data = []
-        grouped_paths = group_mgr.get_grouped_paths(dir_path)
-        if grouped_paths:
-            out_data = [item for item in out_data if item["filePath"] not in grouped_paths]
+        # 应用组：组
+        o_data = exe_data + dir_data + file_data
         all_groups = group_mgr.get_all_groups(dir_path)
+        group_data = []
         for gid, ginfo in all_groups.items():
             # 校验组内文件是否仍有效
             valid_items = [p for p in ginfo.get("items", []) if os.path.exists(p)]
@@ -542,6 +540,10 @@ def update_inf(dir_path,retry_count=0):
             group_data.append(group_item)
         
         o_data = group_data + exe_data + dir_data + file_data
+        # 应用组：过滤已编组文件，注入组项目
+        grouped_paths = group_mgr.get_grouped_paths(dir_path)
+        if grouped_paths:
+            o_data = [item for item in o_data if item["filePath"] not in grouped_paths]
         for item in o_data:
             if check_recover(out_data, item) == True:
                 continue
@@ -611,7 +613,7 @@ def update_inf(dir_path,retry_count=0):
         # 编号写入
         for i, item in enumerate(out_data):
             item['index'] = i
-        return out_data
+        return {"data":out_data}
     except:
         bugs_report(
             "python-update_inf",
@@ -897,9 +899,9 @@ def out_window():
     while True:
         if fullscreen_close == True:
             break
-        if config["out_cf_type"] == "2" and is_ed_focused() == False:
+        if config["out_cf_type"] == "2" and is_ed_focused() == True:
             break
-        if is_mouse_in_easyDesktop() == True:
+        if config["out_cf_type"] == "1" and is_mouse_in_easyDesktop() == True:
             break
         time.sleep(cfg.MOUSE_CHECK_INTERVAL)
     moving = False
@@ -1361,7 +1363,7 @@ class AppAPI:
         if path == "desktop" or path == "" or path == "\\":
             path = "desktop"
         data = update_inf(path)
-        r_data = {"success": True, "data": data,"same":self.file_info_temp==data}
+        r_data = {"success": True, "data": data["data"],"same":self.file_info_temp==data}
         self.file_info_temp = data
         return r_data
 
@@ -1628,6 +1630,17 @@ class AppAPI:
         config["dir_order"]["__groups__:" + config["df_dir"]] = ordered_ids
         json.dump(config, open("config.json", "w"), ensure_ascii=False)
         return {"success": True}
+    
+    def edit_group_order(self, group_id, ordered_paths):
+        if isinstance(ordered_paths,list)==False:
+            return {"success": False, "message": "参数错误"}
+        global config
+        now_dir = config["df_dir"]
+        data = group_mgr._load_groups()
+        data[now_dir][group_id]["items"]=ordered_paths
+        group_mgr._save_groups(data)
+        return {"success": True}
+
 
     def get_imageBase64(self,file_path):
         if file_path in image_preview_cache:
@@ -1815,4 +1828,4 @@ window = webview.create_window(
     transparent=True,
     on_top=True,
 )
-webview.start(func=on_loaded,debug=True)
+webview.start(func=on_loaded,debug=not getattr(sys, 'frozen', False))

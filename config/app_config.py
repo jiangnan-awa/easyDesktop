@@ -171,7 +171,7 @@ def get_default_config(width, height):
         "cf_hotkey":"",
         "out_cf_type": "2",
         "show_sysApp": False,
-        "scale": 90,
+        "scale": 80,
         "df_dir": "desktop",
         "df_dir_name": "桌面",
         "of_s": True,

@@ -182,7 +182,7 @@
             display: none;
         }
         .file-list-cl{
-            width: 1.3%;
+            width: 1.1%;
             margin-right: 10px;
         }
         .file-cl:hover{
@@ -190,7 +190,7 @@
             transition: all 0.5s;
         }
         .file-list-cl:hover{
-            scale: 1.5;
+            scale: 1.3;
             transition: all 0.5s;
         }
         .file-item:hover .file-list-cl{
@@ -266,7 +266,7 @@
             <div class="header">
                 <div class="time-display">
                     <i class="fas fa-clock"></i>
-                    <span id="current-time">loading...</span>
+                    <span style="font-variant-numeric: tabular-nums;" id="current-time">loading...</span>
                 </div>
                 <div class="path-navigation">
                     <button id="pathBackBtn" class="path-btn"><i class="fas fa-arrow-up"></i></button>
@@ -449,10 +449,16 @@
         <div class="file-selection-overlay" id="fileSelectionDialog" style="display: none;">
             <div class="file-selection-container">
                 <div class="file-selection-header">
-                    <h4 style="margin-bottom: 10px;">分类组设置</h4>
+                    <div style="display: flex;">
+                        <h4 style="margin-bottom: 10px;align-items: center;">分类组设置</h4>
+                        <div class="search_box" style="margin-left: auto;overflow: hidden;margin-top: -1.5%;height: 60%;">
+                            <input id="cs_search_box" oninput="run_fileSelector_search()" class="search_input" type="text"
+                                placeholder="搜索...">
+                        </div>
+                    </div>
                     <div class="category-input-container">
-                        <label for="categoryInput" style="color: #a0aec0;">分类名</label>
-                        <input type="text" id="categoryInput" class="category-input">
+                        <!-- <label for="categoryInput" style="color: #a0aec0;">分类名</label> -->
+                        <input type="text" placeholder="分类名" id="categoryInput" class="category-input">
                         <div id="categoryErrorMsg" class="error-msg"></div>
                     </div>
                 </div>

@@ -70,6 +70,8 @@ body {
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     cursor: pointer;
     transition: all 0.2s;
+    height: 10% !important;
+    align-items: center;
 }
 
 .file-list-item:hover {
@@ -113,6 +115,7 @@ body {
     text-decoration: none;
     opacity: 0.9;
     position: relative;
+    border: 1px solid rgba(255, 255, 255, 0);
 }
 
 .file-item:hover {
@@ -800,9 +803,9 @@ input:checked + .slider:before {
     transition: transform 0.3s;
 }
 
-.file-group-item:hover .group-icon-grid {
+/* .file-group-item:hover .group-icon-grid {
     transform: scale(1.1);
-}
+} */
 
 .file-group-item .group-icon-grid img {
     width: 100%;
@@ -882,7 +885,7 @@ input:checked + .slider:before {
 }
 
 .group-view-body .files-grid {
-    display: grid;
+    /* display: grid; */
     grid-template-columns: repeat(auto-fill, minmax(var(--grid-col-width, 120px), 1fr));
     gap: 15px;
     justify-items: center;

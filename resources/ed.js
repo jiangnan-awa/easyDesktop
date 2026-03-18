@@ -21,7 +21,7 @@ const CONSTANTS = {
         "zzz": "/theme/zzz.css"
     },
 
-    CLICK_DELAY: 200,
+    CLICK_DELAY: 100,
     REMIND_DURATION: 1000,
     ERROR_DISPLAY_TIME: 5000
 };
@@ -123,6 +123,7 @@ const Utils = {
 // ========== 应用状态管理 ==========
 const AppState = {
     files_data: [],
+    filter_data:[],
     selectedFile: null,
     contextMenu: null,
     dealing: false,
@@ -197,7 +198,9 @@ const ApiHelper = {
     },
 
     async getFileInfo(path) {
-        return await this.call('get_fileinfo', path);
+        var data = await this.call('get_fileinfo', path);
+        AppState.filter_data = data["filter_data"];
+        return data;
     },
 
     async openFile(filePath) {
@@ -444,6 +447,19 @@ class FileRenderer {
     //     this.gridContainer.style.minHeight = "75vh";
     //     this.listContainer.style.minHeight = "75vh";
     // }
+    renderGroupIcon(isGrid,file){
+        // 2x2 宫格图标
+        let gridHtml = `<div class="group-icon-grid" ${isGrid?'':'style="width: 40px;height: 40px;margin-bottom: 0px;margin-left:1.5%"'}>`;
+        for (let i = 0; i < 4; i++) {
+            if (file.groupIcons && file.groupIcons[i]) {
+                gridHtml += `<img draggable="false" src="${file.groupIcons[i]}" alt="">`;
+            } else {
+                gridHtml += '<div class="group-icon-empty"></div>';
+            }
+        }
+        gridHtml += '</div>';
+        return gridHtml;
+    }
 
     createFileElement = async function(file, isGrid = true) {
         const element = document.createElement('div');
@@ -459,32 +475,13 @@ class FileRenderer {
             const nameClass = isGrid ? 'file-name' : 'file-list-name';
             const typeClass = isGrid ? 'file-type' : 'file-list-type';
 
-            if (isGrid) {
-                // 2x2 宫格图标
-                let gridHtml = '<div class="group-icon-grid">';
-                for (let i = 0; i < 4; i++) {
-                    if (file.groupIcons && file.groupIcons[i]) {
-                        gridHtml += `<img draggable="false" src="${file.groupIcons[i]}" alt="">`;
-                    } else {
-                        gridHtml += '<div class="group-icon-empty"></div>';
-                    }
-                }
-                gridHtml += '</div>';
-                element.innerHTML = `
-                    ${gridHtml}
-                    <span draggable="false" class="${nameClass}">${file.fileName}</span>
-                    <span draggable="false" class="${typeClass}">应用组</span>
-                    <div class="group-badge">${file.itemCount}</div>
-                `;
-            } else {
-                // 列表模式用第一个子图标
-                const listIco = (file.groupIcons && file.groupIcons[0]) || './resources/file_icos/dir.png';
-                element.innerHTML = `
-                    <img draggable="false" src="${listIco}" alt="${file.fileName}" class="file-list-icon">
-                    <span draggable="false" class="${nameClass}">${file.fileName}</span>
-                    <span draggable="false" class="${typeClass}">应用组 (${file.itemCount})</span>
-                `;
-            }
+            let gridHtml = this.renderGroupIcon(isGrid,file);
+            element.innerHTML = `
+                ${gridHtml}
+                <span draggable="false" ${isGrid==true?'':'style="margin-left:12px;"'} class="${nameClass}">${file.fileName}</span>
+                <span draggable="false" class="${typeClass}">应用组</span>
+                ${isGrid==false?'':`<div class="group-badge">${file.itemCount}</div>`}
+            `;
             this.attachGroupEvents(element, file);
             return element;
         }
@@ -660,10 +657,16 @@ const MenuManager = {
             DOMCache.get("edit_icon_btn").innerText="自定义图标"
         }
         // 在普通文件右键菜单中显示"添加到组"，隐藏"从组中移除"
-        const addToGroupItem = DOMCache.get('menuAddToGroup');
-        if (addToGroupItem) addToGroupItem.style.display = 'flex';
-        const removeItem = document.getElementById('menuGroupRemoveItem');
-        if (removeItem) removeItem.style.display = 'none';
+        if(config["df_dir"]==AppState.currentPath){
+            const addToGroupItem = DOMCache.get('menuAddToGroup');
+            if (addToGroupItem) addToGroupItem.style.display = 'flex';
+            const removeItem = document.getElementById('menuGroupRemoveItem');
+            if (removeItem) removeItem.style.display = 'none';
+        }else{
+            addToGroupItem.style.display = 'none'
+            removeItem.style.display = 'none'
+        }
+        
         disableScroll();
     },
 
@@ -784,15 +787,32 @@ const NavigationManager = {
 
 // ========== 搜索管理器 ==========
 const SearchManager = {
-    async performSearch() {
-        const key = DOMCache.get("search_input").value;
+    async performSearch(searchKey=null,render=true) {
+        let key = ""
+        if(searchKey==null){
+            key = DOMCache.get("search_input").value;
+        }else{
+            key = searchKey;
+        }
 
         if (key === "") {
             await fileRenderer.render(AppState.files_data);
             return;
         }
 
-        const pyData = await ApiHelper.loadSearchIndex(AppState.files_data);
+        const groups = AppState.files_data.filter(f => f.isGroup);
+        let group_data = []
+        for (const group of groups) {
+            try {
+                const contents = await ApiHelper.call('get_group_contents', group.groupId);
+                if (contents.data) {
+                    contents.data.forEach(file => {
+                        group_data.push(file);
+                    });
+                }
+            } catch (e) { /* 忽略 */ }
+        }
+        const pyData = await ApiHelper.loadSearchIndex([...AppState.files_data,...group_data]);
         const outData = [];
         const dealKey = Utils.checkChineseChars(key);
 
@@ -805,13 +825,6 @@ const SearchManager = {
             });
         } else {
             AppState.files_data.forEach(file => {
-                // 组项目用组名匹配
-                if (file.isGroup) {
-                    if (Utils.contains(file.fileName, key)) {
-                        outData.push(file);
-                    }
-                    return;
-                }
                 const fileData = pyData[file.fileName];
                 if (fileData && (
                     Utils.contains(fileData.sxpy, key) ||
@@ -823,24 +836,35 @@ const SearchManager = {
         }
 
         // 同时搜索组内文件
-        const groups = AppState.files_data.filter(f => f.isGroup);
         for (const group of groups) {
             if (outData.find(f => f.filePath === group.filePath)) continue;
             try {
                 const contents = await ApiHelper.call('get_group_contents', group.groupId);
                 if (contents.data) {
-                    const hasMatch = contents.data.some(f => {
-                        if (dealKey.have_cn) {
-                            return Utils.contains(f.fileName, dealKey.origin) || Utils.contains(f.fileName, dealKey.fix);
+                    contents.data.forEach(file => {
+                        if(dealKey.have_cn){
+                            // console.log(file)
+                            if (Utils.contains(file.fileName, dealKey.origin) ||
+                                Utils.contains(file.fileName, dealKey.fix)) {
+                                outData.push(file);
+                            }
+                        }else{
+                            const fileData = pyData[file.fileName];
+                            if (fileData && (
+                                Utils.contains(fileData.sxpy, key) ||
+                                Utils.contains(fileData.py, key)
+                            )) {
+                                outData.push(file);
+                            }
                         }
-                        return Utils.contains(f.fileName, key);
+                        
                     });
-                    if (hasMatch) outData.push(group);
                 }
             } catch (e) { /* 忽略 */ }
         }
 
-        await fileRenderer.render(outData);
+        if(render==true)await fileRenderer.render(outData);
+        return outData;
     }
 };
 
@@ -953,6 +977,7 @@ const FileOperationManager = {
 };
 
 // ========== 应用组管理器 ==========
+const groupContainer = document.querySelector('.group-view-container');
 const GroupManager = {
     currentOpenGroup: null,
     currentGroupName: '',
@@ -968,17 +993,17 @@ const GroupManager = {
         title.textContent = groupName || '应用组';
         container.innerHTML = '<div class="loading-indicator">加载中...</div>';
         overlay.style.display = 'flex';
-        UIUtils.disableScroll();
+        // UIUtils.disableScroll();
 
         try {
             const result = await ApiHelper.call('get_group_contents', groupId);
             container.innerHTML = '';
             if (result.data && result.data.length > 0) {
-                const groupContainer = document.querySelector('.group-view-container');
                 for (const file of result.data) {
                     file.index = 0;
                     const el = await fileRenderer.createFileElement(file, true);
                     el.dataset.file_path = file.filePath;
+                    el.dataset.gid = groupId;
                     // 为组内文件添加"从组中移除"的右键菜单
                     el.addEventListener('contextmenu', (e) => {
                         e.preventDefault();
@@ -986,14 +1011,14 @@ const GroupManager = {
                         this.showGroupItemContextMenu(e, file, groupId);
                     });
                     // 拖拽到组窗口外 = 移出组
-                    el.addEventListener('dragend', (e) => {
-                        const rect = groupContainer.getBoundingClientRect();
-                        if (e.clientX < rect.left || e.clientX > rect.right ||
-                            e.clientY < rect.top || e.clientY > rect.bottom) {
-                            const fp = el.dataset.file_path;
-                            if (fp) this.removeFromGroup(groupId, fp);
-                        }
-                    });
+                    // el.addEventListener('dragend', (e) => {
+                    //     const rect = groupContainer.getBoundingClientRect();
+                    //     if (e.clientX < rect.left || e.clientX > rect.right ||
+                    //         e.clientY < rect.top || e.clientY > rect.bottom) {
+                    //         const fp = el.dataset.file_path;
+                    //         if (fp) this.removeFromGroup(groupId, fp);
+                    //     }
+                    // });
                     container.appendChild(el);
                 }
             } else {
@@ -1047,6 +1072,16 @@ const GroupManager = {
             this.isDialogActive = false;
         };
         cancelBtn.addEventListener('click', cancelHandler);
+    },
+
+    async editGroupOrder() {
+        const ctn = DOMCache.get('groupFilesContainer');
+        var paths = [];
+        for(let p of ctn.children){
+            paths.push(p.dataset.file_path)
+        }
+        await ApiHelper.call('edit_group_order', this.currentOpenGroup, paths);
+        NavigationManager.refreshCurrentPath();
     },
 
     async renameGroup(groupId) {
@@ -1156,7 +1191,9 @@ const GroupManager = {
 
     async addToGroup(groupId, filePaths) {
         await ApiHelper.call('add_to_group', groupId, filePaths);
-        NavigationManager.refreshCurrentPath();
+        if(DOMCache.get("search_input").value==''){
+            NavigationManager.refreshCurrentPath();
+        }
     },
 
     async removeFromGroup(groupId, filePath) {
@@ -1724,6 +1761,7 @@ const EventManager = {
                 if (DOMCache.get("renameOverlay").style.display === "flex") return;
                 if (DOMCache.get("groupDeleteConfirm").style.display === "flex") return;
                 if(document.activeElement.id == "categoryInput") return
+                if(document.getElementById("fileSelectionDialog").style.display!="none")return;
                 if(window_state==false)return
 
                 if (searchInput && !event.ctrlKey && !event.altKey && !event.metaKey && event.key.length === 1) {
@@ -1746,6 +1784,15 @@ const EventManager = {
         document.addEventListener('contextmenu', (e) => {
             // this.handleBlankContextMenu(e);
             console.log(e.target)
+            if(config.df_dir==AppState.currentPath){
+                console.log("当前目录")
+                document.getElementById("menuNewGroup").style.display="block"
+                document.getElementById("menuAddToGroup").style.display="block"
+            }else{
+                console.log("非当前目录")
+                document.getElementById("menuNewGroup").style.display="none"
+                document.getElementById("menuAddToGroup").style.display="none"
+            }
         });
         // 空白区域右键菜单
         DOMCache.getBySelector('.content_box').addEventListener('contextmenu', (e) => {
@@ -1923,9 +1970,9 @@ async function showFileSelectionDialog(class_name=null) {
                 });
 
                 // 图标
-                const icon = document.createElement('img');
-                icon.src = item.ico;
-                icon.className = 'file-icon';
+                icon = document.createElement('img');
+                icon.src = item.fileType=="应用组"?"./resources/imgs/group.png":item.ico;
+                
 
                 // 文件名
                 const fileName = document.createElement('div');
@@ -1942,6 +1989,7 @@ async function showFileSelectionDialog(class_name=null) {
                 listItem.appendChild(icon);
                 listItem.appendChild(fileName);
                 listItem.appendChild(fileType);
+                listItem.dataset.filePath = item.filePath;
                 fileSelectionList.appendChild(listItem);
             });
 
@@ -2034,6 +2082,29 @@ async function showFileSelectionDialog(class_name=null) {
 
         observer.observe(dialogContainer, { attributes: true });
     });
+}
+async function run_fileSelector_search(){
+    const fileSelectionList = document.getElementById('fileSelectionList');
+    const input_box = document.getElementById('cs_search_box');
+    if(input_box.value==""){
+        for(let c of fileSelectionList.children){
+            c.style.display = "flex";
+        }
+    }else{
+        let result =  await SearchManager.performSearch(input_box.value,false)
+        // 转为列表
+        result_list = []
+        for(let i of result){
+            result_list.push(i.filePath)
+        }
+        for(let c of fileSelectionList.children){
+            if(result_list.includes(c.dataset.filePath)){
+                c.style.display = "flex";
+            }else{
+                c.style.display = "none";
+            }
+        }
+    }
 }
 
 function open_file(filePath) {
@@ -2677,7 +2748,12 @@ window.addEventListener("keydown", function(event) {
 });
 
 let dragging = false
-boxs = [document.getElementById("filesContainer"),document.getElementById("filesListContainer"),document.getElementById("class_bar")]
+boxs = [
+    document.getElementById("filesContainer"),
+    document.getElementById("filesListContainer"),
+    document.getElementById("class_bar"),
+    document.getElementById("groupFilesContainer")
+]
 content_box = document.getElementById("content_box")
 boxs[0].dataset.other = "list"
 boxs[1].dataset.other = "grid"
@@ -2828,7 +2904,6 @@ for(let list of boxs){
         }
         // 清除所有高亮
         list.querySelectorAll('.drag-over-group').forEach(el => el.classList.remove('drag-over-group'));
-
         if(e.target.classList.contains("class_bar_btn")){
             var order = []
             for(let item of boxs[2].children){
@@ -2836,6 +2911,15 @@ for(let list of boxs){
                 order.push(item.id)
             }
             await ApiHelper.call("save_classOrder",order)
+        }else if(e.target.parentNode.id=="groupFilesContainer"){
+            const rect = groupContainer.getBoundingClientRect();
+            if (e.clientX < rect.left || e.clientX > rect.right ||
+                e.clientY < rect.top || e.clientY > rect.bottom) {
+                const fp = currentLi.dataset.file_path;
+                if (fp) GroupManager.removeFromGroup(currentLi.dataset.gid, fp);
+            }else{
+                await GroupManager.editGroupOrder()
+            }
         }else{
             await save_new_order(list.dataset.other)
         }
