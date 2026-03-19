@@ -89,4 +89,10 @@
 
 欢迎提交 Pull Request！喵。
 
+## 联系方式
 
+- 欢迎加入用户QQ群：**[EasyDesktop](https://qm.qq.com/q/gs8eVn4OLC)**
+
+![QQ](https://gitee.com/codevicent/easy-desktop/raw/main/README_RES/qrcode_1773930356930.jpg)
+
+---
