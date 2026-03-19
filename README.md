@@ -93,6 +93,10 @@
 
 - 欢迎加入用户QQ群：**[EasyDesktop](https://qm.qq.com/q/gs8eVn4OLC)**
 
-![QQ](https://gitee.com/codevicent/easy-desktop/raw/main/README_RES/qrcode_1773930356930.jpg)
+<img src="https://gitee.com/codevicent/easy-desktop/raw/main/README_RES/qrcode_1773930356930.jpg" width="50%">
 
 ---
+
+**如果喜欢这个项目，请点个 Star 支持一下呀！** 
+
+或者 [赞助作者](https://codevicent.xyz/give/)。
