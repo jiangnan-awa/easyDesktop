@@ -28,7 +28,17 @@ public_desktop = os.path.join(os.environ["PUBLIC"], "Desktop")
 class resource_load:
     def __init__(self):
         self.last_update_time = 0
-        self.temp = {}
+        # self.temp = {}
+        if os.path.exists(TEMP_FILE):
+            try:
+                with open(TEMP_FILE, "r",encoding="utf-8") as f:
+                    temp_data = json.load(f)
+                self.temp = temp_data
+            except Exception as e:
+                print(f"读取临时数据失败: {e}")
+                self.temp = {}
+        else:
+            self.temp = {}
     def read_full_temp(self):
         if os.path.exists(TEMP_FILE):
             try:
@@ -41,19 +51,22 @@ class resource_load:
         else:
             return {}
     def write_temp(self,dirPath,temp):
-        data = self.read_full_temp()
+        # data = self.read_full_temp()
+        data = self.temp
         data[dirPath]=temp
+        self.temp = data
         with open(TEMP_FILE, "w",encoding="utf-8") as f:
             json.dump(data, f,ensure_ascii=True, indent=4)
     def read_temp(self,dirPath):
-        if os.path.exists(TEMP_FILE):
-            data = self.read_full_temp()
-            if dirPath in data:
-                return data[dirPath]
-            else:
-                return None
-        else:
-            return None
+        return self.temp[dirPath]
+        # if os.path.exists(TEMP_FILE):
+        #     data = self.read_full_temp()
+        #     if dirPath in data:
+        #         return data[dirPath]
+        #     else:
+        #         return None
+        # else:
+        #     return None
     def check_recover(self,data, match):
         result = False
         for d in data:

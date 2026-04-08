@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 from src import getIcon # 本地模块源
 from src.icon_mgr import iconMgr
 import os
@@ -9,7 +11,6 @@ import pystray
 import darkdetect
 import json
 from PIL import Image
-import winreg as reg
 import sys
 from easygui import msgbox, buttonbox
 from ctypes import windll,WinDLL,wintypes
@@ -28,6 +29,7 @@ from src import tool
 from src.ucfg import ucfg
 from src import screen
 from src import api
+from src.shutdown import ShutdownHandler
 
 print(f"Starting {cfg.APP_NAME}...")
 # keyboard_monitor = kb_tool.KeyboardMonitor()
@@ -308,4 +310,5 @@ window = webview.create_window(
 )
 
 windowMgr.set_window(window)
+shutdown_handler = ShutdownHandler(window)
 webview.start(func=on_loaded,debug=not getattr(sys, 'frozen', False))
