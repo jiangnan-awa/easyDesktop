@@ -1,19 +1,19 @@
-from . import getIcon # 本地模块源
-# from src.icon_mgr import iconMgr
 import os
 import win32com.client
 import win32gui
 import win32api
 import time
-from PIL import Image,ImageGrab
+from PIL import ImageGrab
 import winreg as reg
 import sys
 from easygui import msgbox, buttonbox
 from ctypes import windll,WinDLL,wintypes
 from requests import get as requests_get
 import config as cfg
-from .ucfg import  ucfg
+from .ucfg import ucfg
 from . import screen
+from pynput import mouse
+from threading import Thread
 
 def is_screenshot_light(region=None,threshold=0.4):
     try:
@@ -240,3 +240,29 @@ def get_windowCurrentTargetPos():
     else:
         win_width,win_height = ucfg.data["width"],ucfg.data["height"]
     return win_width,win_height,px,py
+
+class mouse_state:
+    def __init__(self):
+        self.had_click = False
+        self.receive = False
+        Thread(target=self.reg_listener).start()
+    def reg_listener(self):
+        with mouse.Listener(on_click=self.onclick) as listener:
+            listener.join()
+
+    def onclick(self):
+        if self.receive==True:
+            self.had_click = True
+    
+    def get_state(self):
+        if self.receive==True:
+            if self.had_click==True:
+                self.receive = False
+            return self.had_click
+        else:
+            return False
+    def reset(self):
+        self.had_click = False
+        self.receive = True
+
+mouseState = mouse_state()

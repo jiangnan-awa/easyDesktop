@@ -215,10 +215,14 @@ class windowMgr_main():
         self.window.evaluate_js("window_state=true;")
         self.window.evaluate_js("NavigationManager.refreshCurrentPath(true,false);fit_btnBar();")
 
+        tool.mouseState.reset()
         while True:
             if self.fullscreen_close == True:
                 break
-            if ucfg.data["out_cf_type"] == "2" and tool.is_ed_focused() == True:
+            if ucfg.data["out_cf_type"] == "2" and (
+                tool.is_ed_focused() == True
+                or (tool.mouseState.get_state()==True and tool.is_ed_focused()==False)
+            ):
                 break
             if ucfg.data["out_cf_type"] == "1" and tool.is_mouse_in_easyDesktop() == True:
                 break

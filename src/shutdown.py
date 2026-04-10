@@ -1,6 +1,6 @@
 import win32api
 import win32con
-import time
+import os
 
 class ShutdownHandler:
     """处理Windows关机信号的类"""
@@ -41,13 +41,5 @@ class ShutdownHandler:
                 self.window.destroy()
             except Exception as e:
                 print(f"关闭窗口时出错: {e}")
-        
-        # 这里可以添加其他清理工作，如保存配置、关闭文件等
-        # 注意：关机时系统可能只给你几秒的时间，所以清理工作要快
-        
-        # 给系统一点时间处理清理操作
-        time.sleep(0.5)
-        
         # 退出程序
-        import os
         os._exit(0)  # 强制退出，因为系统正在关机

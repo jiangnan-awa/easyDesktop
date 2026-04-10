@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from src import getIcon # 本地模块源
-from src.icon_mgr import iconMgr
 import os
 import win32gui
 import win32api
@@ -22,7 +20,7 @@ import winerror
 import win32event
 import win32file
 import win32pipe
-
+print("正在启动中...")
 from window_effect import set_window_rounded_corners
 from src.windowMgr import windowMgr,hotkeyReg
 from src import tool

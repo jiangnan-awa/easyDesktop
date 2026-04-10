@@ -8,16 +8,25 @@ def get_screen_size():
     r1_width,r1_height = get_active_screen_size()
     return r1_width,r1_height
 
+class sfb:
+    def __init__(self):
+        self.sfb = self.get_sfb_action()
+    def get_sfb(self):
+        return self.sfb
+
+    def get_sfb_action(self):
+        hdc = win32gui.GetDC(0)
+        # 获取物理分辨率
+        physical_width = win32print.GetDeviceCaps(hdc, win32con.DESKTOPHORZRES)
+        # 获取逻辑分辨率（受缩放影响）
+        logical_width = win32print.GetDeviceCaps(hdc, win32con.HORZRES)
+        
+        # 计算缩放比例
+        scale_factor = round(physical_width / logical_width, 2)
+        return scale_factor
+sfb_mgr = sfb()
 def get_sfb():
-    hdc = win32gui.GetDC(0)
-    # 获取物理分辨率
-    physical_width = win32print.GetDeviceCaps(hdc, win32con.DESKTOPHORZRES)
-    # 获取逻辑分辨率（受缩放影响）
-    logical_width = win32print.GetDeviceCaps(hdc, win32con.HORZRES)
-    
-    # 计算缩放比例
-    scale_factor = round(physical_width / logical_width, 2)
-    return scale_factor
+    return sfb_mgr.get_sfb()
 def get_active_screen_size(with_origin=False,with_work_area=False):
     """
     获取当前活动屏幕的宽高（包含鼠标光标的屏幕）
