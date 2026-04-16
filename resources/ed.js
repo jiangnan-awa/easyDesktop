@@ -260,6 +260,114 @@ const ApiHelper = {
 };
 
 // ========== UI工具类 ==========
+const loadingUI = {
+    wait:{},
+    closeList:[],
+    closeAll(){
+        for(var i of this.closeList){
+            i()
+        }
+    },
+    showLoading(container){
+        var wid = setTimeout(()=>{
+            var close_func = this.loading_action(container)
+            this.closeList.push(close_func);
+        },300)
+        this.wait[container.id] = wid;
+    },
+    sets(area,view){
+        if(area=="items_ctn"){
+            if(view==true){
+                this.showLoading(DOMCache.get("filesContainer"))
+                this.showLoading(DOMCache.get("filesListContainer"))
+            }else{
+                this.clearLoading(DOMCache.get("filesContainer"))
+                this.clearLoading(DOMCache.get("filesListContainer"))
+            }
+        }
+    },
+    loading_action(container) {
+        // 确保容器有定位上下文，以便内部绝对定位生效
+        if (getComputedStyle(container).position === 'static') {
+            container.style.position = 'relative';
+        }
+        container.style.minHeight = `${window.innerHeight-container.getBoundingClientRect().top}px`;
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        `;
+        // 创建内容包裹层（用于转圈和文字）
+        const content = document.createElement('div');
+        content.style.cssText = `
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: system-ui, -apple-system, sans-serif;
+            color: #2196F3;
+        `;
+
+        // 创建转圈元素（使用CSS动画）
+        const spinner = document.createElement('div');
+        spinner.style.cssText = `
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #007bff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 12px;
+        `;
+
+        // 创建文字元素
+        const text = document.createElement('div');
+        text.textContent = '加载中...';
+        text.style.cssText = `
+            font-size: 14px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        `;
+
+        // 组装结构
+        content.appendChild(spinner);
+        content.appendChild(text);
+        overlay.appendChild(content);
+        container.appendChild(overlay);
+
+        // 注入旋转动画的keyframes（仅注入一次）
+        if (!document.getElementById('loading-spinner-style')) {
+            const style = document.createElement('style');
+            style.id = 'loading-spinner-style';
+            style.textContent = `
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+            `;
+            document.head.appendChild(style);
+        }
+
+        // 返回一个移除加载提示的函数，方便调用者控制隐藏
+        return function hideLoading() {
+            if (overlay.parentNode === container) {
+            container.removeChild(overlay);
+            }
+        };
+    },
+    clearLoading(container){
+        container.style.minHeight = ""
+        clearTimeout(this.wait[container.id])
+        this.closeAll()
+    },
+}
 const UIUtils = {
     showMessage(message,isErr=true) {
         const errorBox = document.createElement('div');
@@ -470,6 +578,7 @@ class FileRenderer {
         if(ani==true)await new Promise(resolve => setTimeout(resolve, 300));
         if(ani==true)this.changeClass_ani_state(false,"fade-in-up")
         image_preview()
+        loadingUI.sets("items_ctn",false)
     }
 
     clearContainers(target_ctn) {
@@ -751,7 +860,9 @@ const NavigationManager = {
             await this.refreshCurrentPath();
             return;
         }
-
+        DOMCache.get("filesContainer").innerHTML = '';
+        DOMCache.get("filesListContainer").innerHTML = '';
+        loadingUI.sets("items_ctn",true)
         AppState.addToHistory(path);
         await this.updateBreadcrumb(path || '/');
 
@@ -763,19 +874,24 @@ const NavigationManager = {
         })
         await fileRenderer.render(result.data);
         window.scrollTo(0, 0);
+        loadingUI.sets("items_ctn",false)
     },
 
     async refreshCurrentPath(quick_update=true,ani=true) {
         return new Promise(async (resolve) => { 
             console.log(quick_update)
+            loadingUI.sets("items_ctn",true)
             const result = await ApiHelper.getFileInfo(AppState.currentPath,quick_update);
             // if(result.same==true)return;
             DOMCache.get("search_input").value=""
             AppState.setFiles(result.data);
+            loadingUI.sets("items_ctn",false)
+
             await fileRenderer.render(result.data,null,ani);
             if(last_group!="" || last_group!="全部"){
                 change_class(last_group)
             }
+
             console.log(result)
             resolve(true);
         });
@@ -1316,7 +1432,7 @@ const GroupManager = {
             contextMenu.appendChild(removeItem);
         }
         // removeItem.style.display = 'flex';
-        Utils.uiBoxDisplayChange(removeItem,"flex",true)
+        Utils.uiBoxDisplayChange(removeItem,"flex",false)
         removeItem.onclick = () => {
             this.removeFromGroup(groupId, file.filePath);
             MenuManager.hideContextMenu();
@@ -1842,13 +1958,13 @@ const EventManager = {
                 // document.getElementById("menuNewGroup").style.display="block"
                 // document.getElementById("menuAddToGroup").style.display="block"
                 Utils.uiBoxDisplayChange(document.getElementById("menuNewGroup"),block,true)
-                Utils.uiBoxDisplayChange(document.getElementById("menuAddToGroup"),block,true)
+                Utils.uiBoxDisplayChange(document.getElementById("menuAddToGroup"),block,false)
             }else{
                 console.log("非当前目录")
                 // document.getElementById("menuNewGroup").style.display="none"
                 // document.getElementById("menuAddToGroup").style.display="none"
                 Utils.uiBoxDisplayChange(document.getElementById("menuNewGroup"),none,true)
-                Utils.uiBoxDisplayChange(document.getElementById("menuAddToGroup"),none,true)
+                Utils.uiBoxDisplayChange(document.getElementById("menuAddToGroup"),none,false)
             }
         });
         // 空白区域右键菜单
@@ -2801,20 +2917,7 @@ window.addEventListener("keydown", function(event) {
     }
 });
 
-class DragHelper { 
-    constructor() {
-        this.dragging = false
-        this.boxs [
-            document.getElementById("filesContainer"),
-            document.getElementById("filesListContainer"),
-            document.getElementById("class_bar"),
-            document.getElementById("groupFilesContainer")
-        ]
-        this.content_box = document.getElementById("content_box")
-        this.boxs[0].dataset.other = "list"
-        this.boxs[1].dataset.other = "grid"
-    }
-}
+
 let dragging = false
 boxs = [
     document.getElementById("filesContainer"),
@@ -3010,3 +3113,4 @@ async function save_new_order(reload_part){
     // NavigationManager.refreshCurrentPath()
     // fileRenderer.render(new_order,reload_part)
 }
+loadingUI.sets("items_ctn",true);

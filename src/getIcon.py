@@ -189,7 +189,7 @@ def get_shortcut_icon_win32(lnk_path, name):
         print(f"处理快捷方式 {lnk_path} 时出错: {e}")
         return None
 
-def get_icon(exe_path, name):
+def get_icon(exe_path, name,temp=True):
     try:
         dir_name = os.path.dirname(exe_path).replace("/", "-").replace(R"\\", "-").replace(":", "-")
         out_dir = os.path.join(cfg.DESKTOP_ICO_PATH, dir_name)
@@ -199,12 +199,12 @@ def get_icon(exe_path, name):
         relative_path = cfg.DESKTOP_ICO_RELATIVE_PATH + dir_name + "/" + name + ".webp"
 
         # 缓存命中
-        if os.path.exists(webp_path):
+        if temp == True and os.path.exists(webp_path):
             return relative_path
 
         # 检查 exe 文件是否存在
         if not os.path.exists(exe_path):
-            print(f"警告：EXE文件不存在 {exe_path}")
+            # print(f"警告：EXE文件不存在 {exe_path}")
             return None
 
         # 1) 优先Win32提取图标
@@ -219,18 +219,14 @@ def get_icon(exe_path, name):
                 return relative_path
         except Exception as e:
             # Win32 失败 fallback（不要直接返回）
-            print(f"Win32 提取图标失败，准备 fallback: {e} - {exe_path}")
+            # print(f"Win32 提取图标失败，准备 fallback: {e} - {exe_path}")
+            pass
 
         # 2) fallback：复制到临时文件再用 icoextract（避免锁原 exe，且不吃大内存）
-        tmp_path = None
         ico_path = os.path.join(out_dir, f"{name}.ico")
         extractor = None
         try:
-            fd, tmp_path = tempfile.mkstemp(suffix=".exe")
-            os.close(fd)
-            shutil.copy2(exe_path, tmp_path)
-
-            extractor = IconExtractor(tmp_path)
+            extractor = IconExtractor(exe_path)
             extractor.export_icon(ico_path)
 
             out_webp = turn_png(ico_path)
@@ -248,11 +244,11 @@ def get_icon(exe_path, name):
                 # 若 turn_png 保存到了别处（理论上不会），也兜底返回相对路径
                 return relative_path
 
-            print(f"图标转换失败，使用默认图标: {exe_path}")
+            # print(f"图标转换失败，使用默认图标: {exe_path}")
             return None
 
         except Exception as extract_error:
-            print(f"exe图标提取失败: {extract_error} - {exe_path}")
+            # print(f"exe图标提取失败: {extract_error} - {exe_path}")
             return None
         finally:
             # 兜底释放 pefile 相关资源（若 icoextract 内部有）
@@ -262,15 +258,9 @@ def get_icon(exe_path, name):
                     pe.close()
             except Exception:
                 pass
-            # 清理临时复制文件
-            if tmp_path and os.path.exists(tmp_path):
-                try:
-                    os.remove(tmp_path)
-                except Exception:
-                    pass
 
     except Exception as e:
-        print(f"获取图标时发生未知错误: {e} - {exe_path}")
+        # print(f"获取图标时发生未知错误: {e} - {exe_path}")
         return None
 
 def get_url_icon(url_path):

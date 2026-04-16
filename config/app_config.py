@@ -15,9 +15,16 @@ DEFAULT_WINDOW_TITLE = "EasyDesktop_Main"
 if hasattr(sys, '_MEIPASS'):
     DESKTOP_ICO_PATH = "./_internal/desktopICO/"
     ICON_SET_PATH = "./_internal/icon_set/"
+    ICON_GETTER = ['exeIconGet.exe']
 else:
     DESKTOP_ICO_PATH = "./desktopICO/"
     ICON_SET_PATH = "./icon_set/"
+    ICON_GETTER = ['python', 'exeIconGet.py']
+
+def iconGetter(start_data):
+    cmd = ICON_GETTER + [json.dumps(start_data)]
+    return cmd
+
 DESKTOP_ICO_RELATIVE_PATH = "./desktopICO/"
 RESOURCES_PATH = "./resources/"
 FILE_ICO_PATH = "./resources/file_icos/"

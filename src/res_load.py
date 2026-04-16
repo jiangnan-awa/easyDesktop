@@ -58,7 +58,11 @@ class resource_load:
         with open(TEMP_FILE, "w",encoding="utf-8") as f:
             json.dump(data, f,ensure_ascii=True, indent=4)
     def read_temp(self,dirPath):
-        return self.temp[dirPath]
+        if dirPath in self.temp:
+            return self.temp[dirPath]
+        else:
+            return None
+        # return self.temp[dirPath]
         # if os.path.exists(TEMP_FILE):
         #     data = self.read_full_temp()
         #     if dirPath in data:
@@ -205,6 +209,7 @@ class resource_load:
             path_list = [dir_path]
         for i in range(get_count):
             current_dir = path_list[i]
+            iconMgr.update(current_dir)
             for item in os.listdir(current_dir):
                 try:
                     if "desktop.ini" == item:

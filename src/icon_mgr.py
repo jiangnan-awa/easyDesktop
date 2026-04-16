@@ -1,21 +1,67 @@
 import os
 from . import getIcon # 本地模块源
 import config as cfg
-
+import subprocess
+import json
 class icon_mgr():
     def __init__(self):
         self.icon_cache = {}
 
     def save_cache(self,file_path,icon_path):
         self.icon_cache[file_path] = icon_path
+        
+    def call_iconGetter(self,path,temp=True):
+        print("调用图标获取器: ", path)
+        result = subprocess.run(
+            cfg.iconGetter({"path": path,"temp":temp}),
+            capture_output=True,
+            text=True
+        )
+        return result
+    def update(self,path,temp=True):
+        # 先验证有无exe图标
+        r = False
+        for item in os.listdir(path):
+            full_path = os.path.join(path, item)
+            if os.path.isfile(full_path):
+                if item.endswith(".exe") or item.endswith(".EXE"):
+                    r=True
+                    break
+                if item.endswith(".lnk"):
+                    full_path = getIcon.get_shortcut_target(full_path)
+                    if full_path!=None and os.path.exists(full_path):
+                        if os.path.isfile(full_path) and (full_path.endswith(".exe") or full_path.endswith(".EXE")):
+                            r=True
+                            break
+        if r==False:
+            return None
+
+        result = self.call_iconGetter(path,temp)
+        if result.returncode == 0:
+            data = json.loads(result.stdout.strip())
+            if not "error" in data:
+                for item in data:
+                    if data[item]==None:
+                        data[item] = "/resources/file_icos/exe.png"
+                    self.save_cache(item, data[item])
+                    print(f"已更新图标缓存: {item} -> {data[item]}")
+            else:
+                print(f"错误: {data['error']}")
+        else:
+            print(f"错误: {result.stderr}")
+            return f"错误: {result.stderr}"
     def icon_file(self,file_path):
         # return getIcon.match_ico(file_name)
         return getIcon.get_fileIcon(file_path)
     def icon_dir(self):
+
         return cfg.DEFAULT_DIR_ICON
-    def icon_exe(self,file_path,file_name):
-        icon_r = getIcon.get_icon(file_path,file_name)
-        if icon_r!=None:
+    def icon_exe(self,file_path,file_name=""):
+        if file_path in self.icon_cache:
+            return self.icon_cache[file_path]
+        icon_r = self.call_iconGetter(file_path)
+        if icon_r.returncode == 0:
+            icon_r = json.loads(icon_r.stdout.strip())[file_path]
             self.save_cache(file_path,icon_r)
             return icon_r
         else:
