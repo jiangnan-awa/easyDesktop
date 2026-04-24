@@ -292,6 +292,9 @@ const loadingUI = {
         }
     },
     loading_action(container) {
+        if(container.children.length>0){
+            return function hideLoading() {};
+        }
         // 确保容器有定位上下文，以便内部绝对定位生效
         if (getComputedStyle(container).position === 'static') {
             container.style.position = 'relative';
@@ -2954,6 +2957,11 @@ const drag_move = {
 }
 async function detect_posMove(){
     r = await ApiHelper.call("drag_posMoveAction")
+    ms = await ApiHelper.call("mouse_state")
+    if(ms==false){
+        try{clearInterval(pos_move_pc)}catch(e){}
+        return
+    }
     if(r!="none"){
         if(r=="bottom"){
             if(pos_move_pc!=null)return

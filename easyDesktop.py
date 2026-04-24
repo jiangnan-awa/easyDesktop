@@ -197,7 +197,7 @@ def on_loaded():
     if ucfg.data["full_screen"] == True:
         window.resize(screen_width, screen_height)
     hotkeyReg.hotkey_init()
-    Thread(target=check_update, daemon=True).start()
+    Thread(target=app_action.main, daemon=True).start()
     Thread(target=stray, daemon=True).start()
     # Thread(target=hotkey_detect).start()
     start_pipe_server()

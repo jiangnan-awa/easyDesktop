@@ -238,12 +238,17 @@ class mouse_state:
             self.had_click = True
     
     def get_state(self):
+        now_S = self.get_live_state()
+        if now_S == True:
+            self.had_click = True
         if self.receive==True:
             if self.had_click==True:
                 self.receive = False
             return self.had_click
         else:
             return False
+    def get_live_state(self):
+        return windll.user32.GetAsyncKeyState(0x01) & 0x8000 != 0
     def reset(self):
         self.had_click = False
         self.receive = True

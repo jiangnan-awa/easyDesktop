@@ -325,45 +325,44 @@ class windowMgr_main():
             if color_r == True:
                 self.window.evaluate_js("load_theme('light',true)")
                 if ucfg.data['blur_bg']==True:
-                    WindowEffect().setAcrylicEffect(self.hwnd,effect=ucfg.data["blur_effect"])
+                    WindowEffect.setLightBlurEffect(self.hwnd,effect=ucfg.data["blur_effect"])
                     print("from fbe")
             else:
                 self.window.evaluate_js("load_theme('dark',true)")
                 if ucfg.data['blur_bg']==True:
-                    WindowEffect().setAeroEffect(self.hwnd)
+                    WindowEffect.setDarkBlurEffect(self.hwnd,effect=ucfg.data["blur_effect"])
                     print("from fbe")
         if ucfg.data['blur_bg']==False:
             time.sleep(0.2)
-            WindowEffect().setAcrylicEffect(self.hwnd,effect=ucfg.data["blur_effect"])
-            WindowEffect().resetEffect(self.hwnd)
+            WindowEffect.setLightBlurEffect(self.hwnd,effect=ucfg.data["blur_effect"])
+            WindowEffect.resetEffect(self.hwnd)
 
     def load_blur_effect(self,b_type='Acrylic'):
         self.update_hwnd()
         if ucfg.data['blur_bg']==False:
             return
-        WindowEffect().resetEffect(self.hwnd)
+        WindowEffect.resetEffect(self.hwnd)
         print("from lbe")
         if b_type=='Acrylic':
-            WindowEffect().setAcrylicEffect(self.hwnd)
+            WindowEffect.setLightBlurEffect(self.hwnd,effect=ucfg.data["blur_effect"])
         else:
-            WindowEffect().setAeroEffect(self.hwnd)
+            WindowEffect.setDarkBlurEffect(self.hwnd,effect=ucfg.data["blur_effect"])
     def set_blur(self,open_state,real_theme=None):
         # global hwnd,ucfg.data
         hwnd = windowMgr.hwnd
         if ucfg.data["blur_bg"]==False:
             return
-        windowEffect = WindowEffect()
         if real_theme == None:
             real_theme = ucfg.data["theme"]
         if open_state==True:
             if real_theme=="light":
-                windowEffect.setAcrylicEffect(hwnd)
+                WindowEffect.setLightBlurEffect(hwnd,effect=ucfg.data["blur_effect"])
                 print("from sb")
             else:
-                windowEffect.setAeroEffect(hwnd)
+                WindowEffect.setDarkBlurEffect(hwnd,effect=ucfg.data["blur_effect"])
                 print("from sb")
         else:
-            windowEffect.resetEffect(hwnd)
+            WindowEffect.resetEffect(hwnd)
 
     def sys_theme(self):
         if darkdetect.isDark() == True:
@@ -413,15 +412,15 @@ class windowMgr_main():
             if ucfg.data['blur_bg']== True and ucfg.data['bgType']!="1":
                 now_t = self.window.evaluate_js("ThemeManager.now_theme")
                 if now_t=="light":
-                    WindowEffect().setAcrylicEffect(hwnd,effect=ucfg.data['blur_effect'])
+                    WindowEffect.setLightBlurEffect(hwnd,effect=ucfg.data['blur_effect'])
                     print("from uc")
         if part == "blur_bg":
             if ucfg.data['blur_bg']==False:
-                WindowEffect().resetEffect(hwnd)
+                WindowEffect.resetEffect(hwnd)
         if part == "bgType":
             if data!='1':
                 if ucfg.data['blur_bg']==False:
-                    WindowEffect().resetEffect(hwnd,True)
+                    WindowEffect.resetEffect(hwnd,True)
             else:
                 set_window_rounded_corners(hwnd)
         if part == "cf_type" or part == "cf_hotkey":

@@ -578,3 +578,6 @@ class AppAPI:
             os.remove("itemsTemp.json")
         from src.res_load import itmeRes
         itmeRes.temp={}
+
+    def mouse_state(self):
+        return tool.mouseState.get_live_state()
