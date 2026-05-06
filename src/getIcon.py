@@ -335,11 +335,14 @@ def get_shortcut_target(shortcut_path,sec=False):
     shortcut = shell.CreateShortcut(shortcut_path)
     target = shortcut.TargetPath
     if target == "" and sec==False:
-        if not os.path.exists("temp"):
-            os.makedirs("temp")
-        shutil.copy(shortcut_path, "temp/temp.lnk")
-        target = get_shortcut_target("temp/temp.lnk",True)
-        os.remove("temp/temp.lnk")
+        if not os.path.exists("./temp"):
+            os.makedirs("./temp")
+        shutil.copy(shortcut_path, "./temp/temp.lnk")
+        target = get_shortcut_target("./temp/temp.lnk",True)
+        try:
+            os.remove("./temp/temp.lnk")
+        except Exception:
+            pass
     return target
 
 def match_ico(file_name):

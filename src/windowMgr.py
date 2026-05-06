@@ -27,7 +27,7 @@ class hotkeyMgr:
             windowMgr.key_quick_start = True
         else:
             windowMgr.fullscreen_close = True
-        windowMgr.window.evaluate_js("document.body.focus()")
+        windowMgr.call_js("document.body.focus()")
 
     def register(self,hotKey):
         if self.event != None:
@@ -143,6 +143,11 @@ class windowMgr_main():
         self.ignore_action = True
     def enable_autoClose(self):
         self.ignore_action = False
+    def call_js(self,js_code):
+        try:
+            self.window.evaluate_js(js_code)
+        except:
+            print(f"调用js失败: {js_code}")
         
     def animateWindow(
         self,start_x, start_y, end_x, end_y, width, height, steps=cfg.ANIMATION_STEPS, delay=cfg.ANIMATION_DELAY
@@ -229,7 +234,7 @@ class windowMgr_main():
                 or (tool.mouseState.get_state()==True and tool.is_ed_focused()==False)
             ):
                 break
-            if ucfg.data["out_cf_type"] == "1" and tool.is_mouse_in_easyDesktop() == True:
+            if ucfg.data["out_cf_type"] == "1" and (tool.is_mouse_in_easyDesktop() == True or (tool.mouseState.get_state()==True and tool.is_ed_focused()==False)):
                 break
             if ucfg.data["fdr"] == True and tool.is_focused_window_fullscreen() == True:
                 break
@@ -315,7 +320,7 @@ class windowMgr_main():
                 self.out_window()
                 break
             else:
-                if tool.is_desktop_and_mouse_in_corner(wait=0.2) and ucfg.data["cf_type"] == "1":
+                if tool.is_desktop_and_mouse_in_corner(wait=cfg.cornerSize_m[ucfg.data["corner_size"]][1]) and ucfg.data["cf_type"] == "1":
                     self.out_window()
                     break
             if self.window_state == True:

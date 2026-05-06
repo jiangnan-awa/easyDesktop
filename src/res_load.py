@@ -176,13 +176,11 @@ class resource_load:
             info["realPath"] = real_path
         if ext == ".url":
             try:
-                print(file_path)
                 url = self.get_url_from_url_file(file_path)
                 if "steam://rungameid" in url:
                     info["fileType"] = "SteamGame"
             except:
                 print("url解析失败")
-                print(file_path)
         if ext in [".exe",".EXE",".url"]:
             # print(file_path)
             ft = "exe"
@@ -200,7 +198,7 @@ class resource_load:
             if not os.path.exists(dir_path):
                 dir_path = "desktop"
                 ucfg.update_config("df_dir", dir_path)
-                windowMgr.window.evaluate_js('UIUtils.showError("自定义目录不存在，已自动切换到桌面")')
+                windowMgr.call_js('UIUtils.showError("自定义目录不存在，已自动切换到桌面")')
 
         if dir_path == "desktop":
             get_count = 2
@@ -264,7 +262,7 @@ class resource_load:
             dir_path = "desktop"
         exe_data,dir_data,file_data = self.load_items(dir_path)
         self.write_temp(dir_path,{"exe": exe_data,"dir": dir_data,"file": file_data})
-        now_path = windowMgr.window.evaluate_js("AppState.currentPath")
+        now_path = windowMgr.call_js("AppState.currentPath")
         if now_path == dir_path:
             windowMgr.window.evaluate_js("NavigationManager.refreshCurrentPath(true,false)")
     def delay_update(self,dir_path):

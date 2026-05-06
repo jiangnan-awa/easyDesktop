@@ -7,14 +7,11 @@ import time
 import webview
 import pystray
 import darkdetect
-import json
 from PIL import Image
 import sys
-from easygui import msgbox, buttonbox
+from easygui import msgbox
 from ctypes import windll,WinDLL,wintypes
 from threading import Thread
-from requests import get as requests_get
-import webbrowser
 import config as cfg
 import winerror
 import win32event
@@ -31,6 +28,8 @@ from src.shutdown import ShutdownHandler
 from src.nonblocking import nonblocking
 from src.appAction import app_action
 from src.appAction import report
+sys.stdout.reconfigure(encoding='utf-8')
+
 
 print(f"Starting {cfg.APP_NAME}...")
 # keyboard_monitor = kb_tool.KeyboardMonitor()
@@ -102,20 +101,8 @@ if getattr(sys, 'frozen', False):
     base_path = os.path.dirname(os.path.realpath(sys.executable))
     os.chdir(base_path)
 
-# start_action = False
-# has_cleared_fit = False
-# fullscreen_close = False
 resize_window = None
-# ignore_action = False
-# loaded_exe_cache = {}
-# image_preview_cache = {}
-# window_state = False
-# moving = False
 icon = None
-# hwnd = None
-# fit_hwnd = None
-# SW_HIDE = 0
-# SW_SHOW = 5
 os.environ["FUSION_LOG"] = "1"
 os.environ["FUSION_LOG_PATH"] = "/logs/"
 # 加载Windows API
@@ -156,22 +143,11 @@ print(screen_width, screen_height)
 width = int(screen_width * cfg.WINDOW_WIDTH_RATIO)
 height = int(screen_height * cfg.WINDOW_HEIGHT_RATIO)
 
-
-# def hotKey_outAction():
-#     print("hotkey_go")
-#     global key_quick_start,window_state, fullscreen_close
-#     if window_state == False:
-#         key_quick_start = True
-#     else:
-#         fullscreen_close = True
-#     window.evaluate_js("document.body.focus()")
-
 def hide_from_taskbar(window):
     hwnd = windll.user32.FindWindowW(None, window.title)
     style = windll.user32.GetWindowLongW(hwnd, cfg.GWL_EXSTYLE)
     style = (style | cfg.WS_EX_TOOLWINDOW) & ~cfg.WS_EX_APPWINDOW
     windll.user32.SetWindowLongW(hwnd, cfg.GWL_EXSTYLE, style)
-
 
 def ease_out_quad(t):
     # 缓动函数
