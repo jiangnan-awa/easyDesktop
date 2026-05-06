@@ -17,9 +17,9 @@ const CONSTANTS = {
     },
 
     THEME_PATHS: {
-        "dark": "/theme/dark.css",
-        "light": "/theme/light.css",
-        "zzz": "/theme/zzz.css"
+        "dark": "/theme/theme.css",
+        "light": "/theme/theme.css",
+        "zzz": "/theme/theme.css"
     },
 
     CLICK_DELAY: 100,
@@ -2524,7 +2524,10 @@ async function load_theme(theme,from_fit) {
             }
         }
         // 加载主题
-        themeCSS.href = CONSTANTS.THEME_PATHS[theme];
+        if (themeCSS.getAttribute('href') !== CONSTANTS.THEME_PATHS[theme]) {
+            themeCSS.href = CONSTANTS.THEME_PATHS[theme];
+        }
+        document.documentElement.setAttribute('data-theme', theme);
         NavigationManager.refreshCurrentPath();
         render_class_btn()
         console.log(`主题已切换到: ${theme}`);
