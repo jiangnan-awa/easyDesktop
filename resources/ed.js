@@ -885,13 +885,15 @@ const NavigationManager = {
         loadingUI.sets("items_ctn",false)
     },
 
-    async refreshCurrentPath(quick_update=true,ani=true) {
+    async refreshCurrentPath(quick_update=true,ani=true,kws_clear=true) {
         return new Promise(async (resolve) => { 
             console.log(quick_update)
             loadingUI.sets("items_ctn",true)
             const result = await ApiHelper.getFileInfo(AppState.currentPath,quick_update);
             // if(result.same==true)return;
-            DOMCache.get("search_input").value=""
+            if(kws_clear){
+                DOMCache.get("search_input").value=""
+            }
             AppState.setFiles(result.data);
             loadingUI.sets("items_ctn",false)
 

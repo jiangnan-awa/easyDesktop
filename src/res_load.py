@@ -264,7 +264,7 @@ class resource_load:
         self.write_temp(dir_path,{"exe": exe_data,"dir": dir_data,"file": file_data})
         now_path = windowMgr.call_js("AppState.currentPath")
         if now_path == dir_path:
-            windowMgr.window.evaluate_js("NavigationManager.refreshCurrentPath(true,false)")
+            windowMgr.window.evaluate_js("NavigationManager.refreshCurrentPath(true,false,false)")
     def delay_update(self,dir_path):
         print(time.time()-self.last_update_time)
         if time.time()-self.last_update_time>2:
