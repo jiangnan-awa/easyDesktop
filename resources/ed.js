@@ -788,8 +788,6 @@ const MenuManager = {
         // contextMenu.style.display = 'block';
         Utils.uiBoxDisplayChange(contextMenu,block,true)
         var scale_rate = config["scale"] / 100
-        console.log(e.pageX / scale_rate)
-        console.log((window.innerWidth-contextMenu.offsetWidth)/scale_rate)
         if((e.pageX / scale_rate)>((window.innerWidth-contextMenu.offsetWidth)/scale_rate)){
             contextMenu.style.left = `${(window.innerWidth - contextMenu.offsetWidth) / scale_rate}px`;
         }else{
@@ -875,6 +873,9 @@ const NavigationManager = {
         await this.updateBreadcrumb(path || '/');
 
         const result = await ApiHelper.getFileInfo(path);
+        if(AppState.currentPath!=path){
+            return
+        }
         AppState.setFiles(result.data);
         DOMCache.get("content_box").scrollTo({
             top: 0,
@@ -887,7 +888,7 @@ const NavigationManager = {
 
     async refreshCurrentPath(quick_update=true,ani=true,kws_clear=true) {
         return new Promise(async (resolve) => { 
-            console.log(quick_update)
+            console.log("更新！！！")
             loadingUI.sets("items_ctn",true)
             const result = await ApiHelper.getFileInfo(AppState.currentPath,quick_update);
             // if(result.same==true)return;
@@ -901,23 +902,18 @@ const NavigationManager = {
             if(last_group!="" || last_group!="全部"){
                 change_class(last_group)
             }
-
-            console.log(result)
             resolve(true);
         });
     },
 
     async updateBreadcrumb(path) {
-        console.log(path)
         const config = await ApiHelper.getConfig();
         const breadcrumb = DOMCache.get('breadcrumb');
         breadcrumb.innerHTML = '';
 
         const desktopPath = await ApiHelper.call('search_desktop_path');
         const basePath = config.df_dir === "desktop" ? desktopPath : config.df_dir;
-        console.log(basePath)
         const parts = path.replace(basePath, "").split('\\').filter(part => part.length > 0);
-        console.log(parts)
 
         // 添加根目录项
         const rootItem = document.createElement('span');
@@ -950,7 +946,6 @@ const NavigationManager = {
             item.dataset.path = currentPath;
             breadcrumb.appendChild(item);
         });
-        console.log("______")
     }
 };
 
@@ -2375,7 +2370,6 @@ async function push(fData = null, useLoadDir = false, path = '') {
 }
 let preview_runing = false
 async function image_preview() {
-    console.log("image_preview")
     try{
         if(preview_runing) return;
         let config = await ApiHelper.getConfig()
@@ -2385,7 +2379,7 @@ async function image_preview() {
             if([".png",".jpg",".jpeg",".bmp",".gif"].includes(file.fileType)){
                 var view_img = await ApiHelper.call("get_imageBase64", file.filePath);
                 if(view_img){
-                    console.log("预览图片："+file.fileName)
+                    // console.log("预览图片："+file.fileName)
                     te = document.getElementById(Utils.generateFileId(file.filePath))
                     te.children[1].src = view_img
                 }

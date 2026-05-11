@@ -1,3 +1,4 @@
+from ntpath import isfile
 from src import getIcon # 本地模块源
 from src.icon_mgr import iconMgr
 
@@ -213,8 +214,11 @@ class resource_load:
                 try:
                     if "desktop.ini" == item:
                         continue
-                    filename, _ = os.path.splitext(item) # 文件名
                     full_path = os.path.join(current_dir, item) # 完整路径
+                    if os.path.isfile(full_path):
+                        filename, _ = os.path.splitext(item) # 文件名
+                    else:
+                        filename = item
 
                     ico = iconMgr.get_icon(full_path,filename)
                     if os.path.isfile(full_path):

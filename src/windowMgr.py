@@ -21,18 +21,26 @@ class hotkeyMgr:
     def __init__(self):
         self.hotKey = ""
         self.event = None
+        self.hadCreate_task = False
+
 
     def hotKey_action(self):
-        if windowMgr.window_state == False:
-            windowMgr.key_quick_start = True
-        else:
-            windowMgr.fullscreen_close = True
-        windowMgr.call_js("document.body.focus()")
+        try:
+            if windowMgr.window_state == False:
+                windowMgr.key_quick_start = True
+            else:
+                windowMgr.fullscreen_close = True
+            windowMgr.call_js("document.body.focus()")
+        except:
+            self.reRegister()
 
     def register(self,hotKey):
+        self.hotKey = hotKey
         if self.event != None:
             keyboard.remove_hotkey(self.event)
         self.event = keyboard.add_hotkey(hotKey,self.hotKey_action)
+        if self.hadCreate_task == False:
+            hotkeyReg.reRegTask()
     def hotkey_init(self):
         if ucfg.data["cf_type"]=="2":
             self.register("left windows+shift")
@@ -40,6 +48,19 @@ class hotkeyMgr:
             self.register("left windows+escape")
         if ucfg.data["cf_type"]=="4":
             self.register(ucfg.data["cf_hotkey"])
+    def reRegister(self):
+        self.register(self.hotKey)
+    def reRegisterTaskAction(self):
+        print("reRegisterTaskAction start")
+        while True:
+            self.register(self.hotKey)
+            time.sleep(300)
+    def reRegTask(self):
+        if self.hadCreate_task == True:
+            return
+        self.hadCreate_task = True
+        Thread(target=self.reRegisterTaskAction, daemon=True).start()
+
 
 hotkeyReg = hotkeyMgr()
 
