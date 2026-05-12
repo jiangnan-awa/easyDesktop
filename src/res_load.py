@@ -13,6 +13,7 @@ import traceback
 
 import base64
 import io
+import stat
 
 import configparser
 from src.windowMgr import windowMgr
@@ -26,7 +27,12 @@ desktop_path = tool.get_desktop_path()
 public_desktop = os.path.join(os.environ["PUBLIC"], "Desktop")
 
 
-
+def is_hidden(filepath):
+    """检查文件是否具有隐藏属性"""
+    try:
+        return bool(os.stat(filepath).st_file_attributes & stat.FILE_ATTRIBUTE_HIDDEN)
+    except:
+        return False
 class resource_load:
     def __init__(self):
         self.last_update_time = 0
@@ -190,7 +196,7 @@ class resource_load:
         else:
             ft = "file"
         return {"inf_type":ft,"inf":info}
-    def load_items(self,dir_path):
+    def load_items(self,dir_path,ignore_icno=False):
         exe_data = []
         dir_data = []
         file_data = []
@@ -209,12 +215,15 @@ class resource_load:
             path_list = [dir_path]
         for i in range(get_count):
             current_dir = path_list[i]
-            iconMgr.update(current_dir)
+            if ignore_icno==False:
+                iconMgr.update(current_dir)
             for item in os.listdir(current_dir):
                 try:
                     if "desktop.ini" == item:
                         continue
                     full_path = os.path.join(current_dir, item) # 完整路径
+                    if not ucfg.data["show_hidden_file"] and is_hidden(full_path):
+                        continue
                     if os.path.isfile(full_path):
                         filename, _ = os.path.splitext(item) # 文件名
                     else:
@@ -275,13 +284,13 @@ class resource_load:
             print("update")
             Thread(target=self.delay_update_action,args=(dir_path,)).start()
         
-    def get_items(self,dir_path,quick_update=True):
+    def get_items(self,dir_path,quick_update=True,ignore_icno=False):
         if quick_update==False:
             print("及时更新")
-            return self.load_items(dir_path)
+            return self.load_items(dir_path,ignore_icno)
         temp_data = self.read_temp(dir_path)
         if temp_data==None:
-            return self.load_items(dir_path)
+            return self.load_items(dir_path,ignore_icno)
         else:
             self.delay_update(dir_path)
             return temp_data["exe"],temp_data["dir"],temp_data["file"]
@@ -418,13 +427,13 @@ class resource_load:
             item['index'] = i
         return {"data":out_data}
 
-    def update_inf(self,dir_path,quick_update=True):
+    def update_inf(self,dir_path,quick_update=True,ignore_icno=False):
         try:
             if dir_path == "/\\":
                 dir_path = "desktop"
 
             # global config
-            exe_data,dir_data,file_data = self.get_items(dir_path,quick_update)
+            exe_data,dir_data,file_data = self.get_items(dir_path,quick_update,ignore_icno)
             return self.order_items(dir_path,exe_data,dir_data,file_data)
             
             

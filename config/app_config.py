@@ -7,8 +7,8 @@ import sys
 import json
 
 # ===== 应用程序基本信息 =====
-APP_VERSION = "2.6.3"
-APP_VERSION_CODE = 2630
+APP_VERSION = "2.7.0"
+APP_VERSION_CODE = 2700
 APP_NAME = "EasyDesktop"
 DEFAULT_WINDOW_TITLE = "EasyDesktop_Main"
 
@@ -200,7 +200,9 @@ def get_default_config(width, height):
         "dir_order":{},
         "class_order":[],
         "ico":{},
-        "dbc_action":"1"
+        "dbc_action":"1",
+        "show_hidden_file":False,
+        "custom":{}
     }
 
 # ===== 系统应用程序配置 =====

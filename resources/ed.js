@@ -221,8 +221,8 @@ const ApiHelper = {
         return await this.call('update_config', key, value);
     },
 
-    async getFileInfo(path,quick=true) {
-        var data = await this.call('get_fileinfo', path,quick);
+    async getFileInfo(path,quick=true,ign_icno=false) {
+        var data = await this.call('get_fileinfo', path,quick,ign_icno);
         AppState.filter_data = data["filter_data"];
         return data;
     },
@@ -262,6 +262,7 @@ const ApiHelper = {
     async cleanTemp() {
         await this.call('clean_temp');
         UIUtils.showMessage("缓存清理完成",false)
+        NavigationManager.refreshCurrentPath();
     },
 };
 
@@ -878,20 +879,16 @@ const NavigationManager = {
             return
         }
         AppState.setFiles(result.data);
-        DOMCache.get("content_box").scrollTo({
-            top: 0,
-            behavior: 'smooth',
-        })
         await fileRenderer.render(result.data);
-        window.scrollTo(0, 0);
         loadingUI.sets("items_ctn",false)
+        scroll_top();
     },
 
-    async refreshCurrentPath(quick_update=true,ani=true,kws_clear=true) {
+    async refreshCurrentPath(quick_update=true,ani=true,kws_clear=true,ign_icno=false) {
         return new Promise(async (resolve) => { 
             console.log("更新！！！")
             loadingUI.sets("items_ctn",true)
-            const result = await ApiHelper.getFileInfo(AppState.currentPath,quick_update);
+            const result = await ApiHelper.getFileInfo(AppState.currentPath,quick_update,ign_icno);
             // if(result.same==true)return;
             if(kws_clear){
                 DOMCache.get("search_input").value=""
@@ -1143,7 +1140,6 @@ const ThemeManager = {
         this.customThemeConfig = JSON.parse(JSON.stringify(this.originalCustomTheme));
         this.applyCustomThemeVariables(this.customThemeConfig);
         DOMCache.get('themeEditorOverlay').style.display = 'none';
-        ApiHelper.call('unlock_window_visibility');
     }
 };
 
@@ -1186,7 +1182,7 @@ const FileOperationManager = {
 
     async removeFile(filePath, type = "remove") {
         const result = await ApiHelper.removeFile(filePath, type);
-        await NavigationManager.refreshCurrentPath();
+        await NavigationManager.refreshCurrentPath(false,false,false,true);
         return result;
     },
 
@@ -1217,7 +1213,7 @@ const FileOperationManager = {
 
     async refreshAndRemindFile(result) {
         console.log(result)
-        await NavigationManager.refreshCurrentPath(false,false);
+        await NavigationManager.refreshCurrentPath(false,false,false,true);
 
         if (result.file) {
             setTimeout(() => {
@@ -1896,7 +1892,13 @@ const EventManager = {
             'forest-green': { primary: '#a8e063', secondary: '#1b3a2b', secondaryAlpha: 75, bgType: 'gradient', bgGradient1: '#134e5e', bgGradient2: '#71b280', mainText: '#ffffff', subText: '#d4edda' },
             'sunset-orange': { primary: '#ff9068', secondary: '#4a1d1d', secondaryAlpha: 70, bgType: 'gradient', bgGradient1: '#f46b45', bgGradient2: '#eea849', mainText: '#ffffff', subText: '#ffeadb' },
             'sakura-pink': { primary: '#ff758c', secondary: '#4a2c3a', secondaryAlpha: 70, bgType: 'gradient', bgGradient1: '#ff9a9e', bgGradient2: '#fecfef', mainText: '#ffffff', subText: '#ffe0e6' },
-            'midnight-purple': { primary: '#9d50bb', secondary: '#240b36', secondaryAlpha: 80, bgType: 'gradient', bgGradient1: '#232526', bgGradient2: '#414345', mainText: '#e0e0e0', subText: '#a0a0a0' }
+            'midnight-purple': { primary: '#9d50bb', secondary: '#240b36', secondaryAlpha: 80, bgType: 'gradient', bgGradient1: '#232526', bgGradient2: '#414345', mainText: '#e0e0e0', subText: '#a0a0a0' },
+            'cyberpunk': { primary: '#ff00ff', secondary: '#000000', secondaryAlpha: 80, bgType: 'gradient', bgGradient1: '#000000', bgGradient2: '#120458', mainText: '#00ffff', subText: '#ff00ff' },
+            'matcha': { primary: '#8fb9a8', secondary: '#ffffff', secondaryAlpha: 40, bgType: 'gradient', bgGradient1: '#fefad4', bgGradient2: '#d4e4bc', mainText: '#2d342d', subText: '#4e594b' },
+            'mocha': { primary: '#a0785a', secondary: '#1a0f0a', secondaryAlpha: 80, bgType: 'gradient', bgGradient1: '#3d2b1f', bgGradient2: '#1a0f0a', mainText: '#f5f5f5', subText: '#d7ccc8' },
+            'nordic': { primary: '#5e81ac', secondary: '#ffffff', secondaryAlpha: 50, bgType: 'gradient', bgGradient1: '#eceff4', bgGradient2: '#d8dee9', mainText: '#2e3440', subText: '#4c566a' },
+            'golden': { primary: '#f6d365', secondary: '#4a3c1d', secondaryAlpha: 70, bgType: 'gradient', bgGradient1: '#f6d365', bgGradient2: '#fda085', mainText: '#ffffff', subText: '#ffedbc' },
+            'deep-sea': { primary: '#48c6ef', secondary: '#0b2d39', secondaryAlpha: 85, bgType: 'gradient', bgGradient1: '#0b2d39', bgGradient2: '#000000', mainText: '#ffffff', subText: '#6f9d98' }
         };
 
         DOMCache.getAllBySelector('.preset-item').forEach(item => {
@@ -1917,12 +1919,12 @@ const EventManager = {
     initToggleSettings() {
         const toggles = [
             'autoStartToggle', 'fullScreenToggle', 'fdrToggle',
-            'of_sToggle', 'sysappToggle',/* 'followSystemTheme',*/'imgpreToggle','blurToggle'
+            'of_sToggle', 'sysappToggle',/* 'followSystemTheme',*/'imgpreToggle','blurToggle','showHiddenToggle'
         ];
 
         const configKeys = [
             'auto_start', 'full_screen', 'fdr',
-            'of_s', 'show_sysApp',/* 'follow_sys',*/'imgpre','blur_bg'
+            'of_s', 'show_sysApp',/* 'follow_sys',*/'imgpre','blur_bg','show_hidden_file'
         ];
 
         toggles.forEach((toggleId, index) => {
@@ -1939,6 +1941,9 @@ const EventManager = {
                     }
                 }else if(toggleId === "blurToggle"){
                     ApiHelper.call('set_blur_effect', this.checked,ThemeManager.now_theme);
+                }else if(toggleId === "showHiddenToggle"){
+                    console.log("showHiddenToggle")
+                    NavigationManager.refreshCurrentPath(false,false,false,true)
                 }
             });
         });
@@ -2873,7 +2878,8 @@ window.addEventListener('pywebviewready', async function () {
                 ['of_sToggle', 'of_s'],
                 ['sysappToggle', 'show_sysApp'],
                 ['imgpreToggle', 'imgpre'],
-                ['blurToggle','blur_bg']
+                ['blurToggle','blur_bg'],
+                ['showHiddenToggle','show_hidden_file']
             ];
 
             toggleConfigs.forEach(([elementId, configKey]) => {
@@ -3314,4 +3320,11 @@ async function save_new_order(reload_part){
     console.log(reload_part)
     // NavigationManager.refreshCurrentPath()
     // fileRenderer.render(new_order,reload_part)
+}
+async function scroll_top(){
+    DOMCache.get("content_box").scrollTo({
+        top: 0,
+        behavior: 'smooth',
+    })
+    window.scrollTo(0, 0);
 }
