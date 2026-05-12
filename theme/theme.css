@@ -218,6 +218,85 @@
     --dir-btn-active-bg: white;
 }
 
+[data-theme="custom"] {
+    /* 基础映射变量，由用户自定义 */
+    --custom-primary: #667eea;
+    --custom-secondary: rgba(40, 40, 60, 0.7);
+    --custom-bg: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    --custom-text-main: #e0e0e0;
+    --custom-text-sub: #8a9ba8;
+
+    --font-family: 'df';
+    --bg-gradient: var(--custom-bg);
+    --body-bg-size: cover;
+    --text-color: var(--custom-text-main);
+    --selection-bg: var(--custom-bg);
+    --time-display-color: var(--custom-text-main);
+    --time-display-icon-color: var(--custom-primary);
+    --files-list-bg: var(--custom-secondary);
+    --file-list-item-border: rgba(255, 255, 255, 0.05);
+    --file-list-item-hover: rgba(255, 255, 255, 0.05);
+    --file-list-name-color: var(--custom-text-main);
+    --file-list-type-color: var(--custom-text-sub);
+    --file-list-icon-filter: brightness(0.8);
+    --file-item-color: var(--custom-text-main);
+    --file-item-hover-bg: var(--custom-secondary);
+    --file-item-hover-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    --file-item-hover-border: rgba(255, 255, 255, 0.1);
+    --file-name-color: var(--custom-text-main);
+    --file-name-shadow: none;
+    --file-type-color: var(--custom-text-sub);
+    --info-bar-bg: var(--custom-secondary);
+    --info-bar-color: var(--custom-text-sub);
+    --info-bar-border: 1px solid rgba(255, 255, 255, 0.1);
+    --path-btn-color: var(--custom-text-sub);
+    --path-btn-hover-bg: rgba(255, 255, 255, 0.1);
+    --path-btn-hover-color: var(--custom-primary);
+    --breadcrumb-bg: var(--custom-secondary);
+    --breadcrumb-color: var(--custom-text-main);
+    --breadcrumb-border: 1px solid rgba(255, 255, 255, 0.1);
+    --breadcrumb-item-color: var(--custom-primary);
+    --breadcrumb-item-hover: rgba(102, 126, 234, 0.1);
+    --view-btn-color: var(--custom-text-sub);
+    --view-btn-hover-bg: rgba(255, 255, 255, 0.05);
+    --view-btn-hover-color: var(--custom-primary);
+    --view-btn-active-bg: rgba(52, 152, 219, 0.1);
+    --context-menu-bg: var(--custom-secondary);
+    --context-menu-item-icon: var(--custom-primary);
+    --context-menu-item-hover: rgba(255, 255, 255, 0.1);
+    --rename-overlay-bg: rgba(0, 0, 0, 0.5);
+    --rename-container-bg: var(--custom-bg);
+    --rename-title-color: var(--custom-text-main);
+    --rename-input-bg: var(--custom-text-main);
+    --rename-input-color: var(--custom-secondary);
+    --rename-btn-confirm-bg: var(--custom-primary);
+    --rename-btn-cancel-bg: var(--custom-text-sub);
+    --delete-container-bg: var(--custom-secondary);
+    --delete-title-color: #e74c3c;
+    --delete-text-color: var(--custom-text-main);
+    --group-delete-icon-bg: rgba(231, 76, 60, 0.16);
+    --group-delete-icon-color: #ff8e84;
+    --group-delete-note-bg: rgba(255, 255, 255, 0.05);
+    --group-delete-note-border: 1px solid rgba(255, 255, 255, 0.08);
+    --group-delete-note-color: var(--custom-text-sub);
+    --search-box-bg: var(--custom-secondary);
+    --search-box-border: 1px solid rgba(255, 255, 255, 0.1);
+    --search-input-color: var(--custom-text-main);
+    --settings-btn-bg: var(--custom-secondary);
+    --settings-btn-color: var(--custom-text-main);
+    --settings-panel-bg: var(--custom-secondary);
+    --settings-panel-border: 1px solid rgba(255, 255, 255, 0.1);
+    --settings-header-color: var(--custom-text-main);
+    --theme-card-bg: var(--custom-secondary);
+    --theme-card-active-border: var(--custom-primary);
+    --class-btn-color: var(--custom-text-sub);
+    --class-btn-active-color: var(--custom-primary);
+    --group-badge-bg: var(--custom-primary);
+    --group-badge-color: white;
+    --group-container-bg: var(--custom-bg);
+    --dir-btn-active-bg: var(--custom-primary);
+}
+
 /* 应用变量到样式 */
 
 * {
@@ -368,10 +447,10 @@ body {
 
 .rename-btn.confirm {
     background: var(--rename-btn-confirm-bg);
-    color: var(--context-menu-bg); /* Use context-menu-bg for contrast if confirm is light, or vice-versa */
+    color: white;
 }
 
-[data-theme="dark"] .rename-btn.confirm, [data-theme="light"] .rename-btn.confirm {
+[data-theme="dark"] .rename-btn.confirm, [data-theme="light"] .rename-btn.confirm, [data-theme="custom"] .rename-btn.confirm {
     color: white;
 }
 

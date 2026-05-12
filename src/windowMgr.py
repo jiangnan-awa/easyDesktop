@@ -353,12 +353,14 @@ class windowMgr_main():
         if ucfg.data["themeChangeType"]=="2":
             color_r = tool.is_screenshot_light((end_x,end_y,end_x+width,end_y+height),threshold=0.4)
             if color_r == True:
-                self.window.evaluate_js("load_theme('light',true)")
+                if ucfg.data["theme"]!="custom":
+                    self.window.evaluate_js("load_theme('light',true)")
                 if ucfg.data['blur_bg']==True:
                     WindowEffect.setLightBlurEffect(self.hwnd,effect=ucfg.data["blur_effect"])
                     print("from fbe")
             else:
-                self.window.evaluate_js("load_theme('dark',true)")
+                if ucfg.data["theme"]!="custom":
+                    self.window.evaluate_js("load_theme('dark',true)")
                 if ucfg.data['blur_bg']==True:
                     WindowEffect.setDarkBlurEffect(self.hwnd,effect=ucfg.data["blur_effect"])
                     print("from fbe")

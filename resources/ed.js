@@ -19,7 +19,8 @@ const CONSTANTS = {
     THEME_PATHS: {
         "dark": "/theme/theme.css",
         "light": "/theme/theme.css",
-        "zzz": "/theme/theme.css"
+        "zzz": "/theme/theme.css",
+        "custom": "/theme/theme.css"
     },
 
     CLICK_DELAY: 100,
@@ -1035,6 +1036,9 @@ const SearchManager = {
 // ========== 主题管理器 ==========
 const ThemeManager = {
     now_theme: 'light',
+    customThemeConfig: null,
+    originalCustomTheme: null,
+
     async applyBackgroundSettings(config) {
         if(config.bgType!="1")return;
         console.log("applyBackgroundSettings")
@@ -1053,6 +1057,93 @@ const ThemeManager = {
                 backdropFilter: ''
             });
         }
+    },
+
+    async initCustomTheme() {
+        const config = await ApiHelper.getConfig();
+        this.originalCustomTheme = config.userTheme || {
+            primary: '#667eea',
+            secondary: '#28283c',
+            secondaryAlpha: 70,
+            bgType: 'gradient',
+            bgColor: '#1a1a2e',
+            bgGradient1: '#1a1a2e',
+            bgGradient2: '#16213e',
+            mainText: '#e0e0e0',
+            subText: '#8a9ba8'
+        };
+        this.customThemeConfig = JSON.parse(JSON.stringify(this.originalCustomTheme));
+        this.applyCustomThemeVariables(this.customThemeConfig);
+    },
+
+    applyCustomThemeVariables(config) {
+        const root = document.documentElement;
+        root.style.setProperty('--custom-primary', config.primary);
+        
+        const secondary = config.secondary;
+        const alpha = config.secondaryAlpha / 100;
+        let rgbaSecondary = secondary;
+        if (secondary.startsWith('#')) {
+            const r = parseInt(secondary.slice(1, 3), 16);
+            const g = parseInt(secondary.slice(3, 5), 16);
+            const b = parseInt(secondary.slice(5, 7), 16);
+            rgbaSecondary = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+        root.style.setProperty('--custom-secondary', rgbaSecondary);
+
+        let bg;
+        if (config.bgType === 'solid') {
+            bg = config.bgColor;
+        } else {
+            bg = `linear-gradient(135deg, ${config.bgGradient1} 0%, ${config.bgGradient2} 100%)`;
+        }
+        root.style.setProperty('--custom-bg', bg);
+        root.style.setProperty('--custom-text-main', config.mainText);
+        root.style.setProperty('--custom-text-sub', config.subText);
+    },
+
+    openEditor() {
+        const overlay = DOMCache.get('themeEditorOverlay');
+        const config = this.customThemeConfig;
+
+        // 设置表单值
+        DOMCache.get('primaryColorPicker').value = config.primary;
+        DOMCache.get('secondaryColorPicker').value = config.secondary;
+        DOMCache.get('secondaryAlphaPicker').value = config.secondaryAlpha;
+        DOMCache.get('secondaryAlphaValue').innerText = config.secondaryAlpha + '%';
+        
+        DOMCache.get('bgColorPicker').value = config.bgColor;
+        DOMCache.get('bgGradient1').value = config.bgGradient1;
+        DOMCache.get('bgGradient2').value = config.bgGradient2;
+        
+        DOMCache.get('mainTextColorPicker').value = config.mainText;
+        DOMCache.get('subTextColorPicker').value = config.subText;
+
+        // 背景类型按钮
+        const bgBtns = DOMCache.getAllBySelector('.bg-type-btn');
+        bgBtns.forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.type === config.bgType);
+        });
+        DOMCache.get('solidBgPicker').style.display = config.bgType === 'solid' ? 'flex' : 'none';
+        DOMCache.get('gradientBgPicker').style.display = config.bgType === 'gradient' ? 'flex' : 'none';
+
+        // 显示弹窗
+        overlay.style.display = 'flex';
+        ApiHelper.call('lock_window_visibility');
+    },
+
+    async saveCustomTheme() {
+        this.originalCustomTheme = JSON.parse(JSON.stringify(this.customThemeConfig));
+        await ApiHelper.updateConfig('userTheme', this.originalCustomTheme);
+        DOMCache.get('themeEditorOverlay').style.display = 'none';
+        ApiHelper.call('unlock_window_visibility');
+    },
+
+    cancelEdit() {
+        this.customThemeConfig = JSON.parse(JSON.stringify(this.originalCustomTheme));
+        this.applyCustomThemeVariables(this.customThemeConfig);
+        DOMCache.get('themeEditorOverlay').style.display = 'none';
+        ApiHelper.call('unlock_window_visibility');
     }
 };
 
@@ -1734,6 +1825,93 @@ const EventManager = {
         this.initThemeSettings();
         this.initBackgroundSettings();
         this.initScaleSettings();
+        this.initThemeEditorEvents();
+    },
+
+    initThemeEditorEvents() {
+        const self = this;
+        
+        // 双击自定义主题卡片打开编辑器
+        const customCard = DOMCache.get('customThemeCard');
+        if (customCard) {
+             customCard.addEventListener('dblclick', () => {
+                 ThemeManager.openEditor();
+             });
+             customCard.addEventListener('contextmenu', (e) => {
+                 e.preventDefault();
+                 ThemeManager.openEditor();
+             });
+         }
+
+        // 关闭按钮
+        DOMCache.get('closeThemeEditor').addEventListener('click', () => ThemeManager.cancelEdit());
+        DOMCache.get('cancelThemeEdit').addEventListener('click', () => ThemeManager.cancelEdit());
+        DOMCache.get('confirmThemeEdit').addEventListener('click', () => ThemeManager.saveCustomTheme());
+
+        // 颜色选择器实时预览
+        const colorPickers = [
+            { id: 'primaryColorPicker', key: 'primary' },
+            { id: 'secondaryColorPicker', key: 'secondary' },
+            { id: 'bgColorPicker', key: 'bgColor' },
+            { id: 'bgGradient1', key: 'bgGradient1' },
+            { id: 'bgGradient2', key: 'bgGradient2' },
+            { id: 'mainTextColorPicker', key: 'mainText' },
+            { id: 'subTextColorPicker', key: 'subText' }
+        ];
+
+        colorPickers.forEach(picker => {
+            DOMCache.get(picker.id).addEventListener('input', (e) => {
+                ThemeManager.customThemeConfig[picker.key] = e.target.value;
+                ThemeManager.applyCustomThemeVariables(ThemeManager.customThemeConfig);
+            });
+        });
+
+        // 透明度预览
+        DOMCache.get('secondaryAlphaPicker').addEventListener('input', (e) => {
+            const val = e.target.value;
+            ThemeManager.customThemeConfig.secondaryAlpha = parseInt(val);
+            DOMCache.get('secondaryAlphaValue').innerText = val + '%';
+            ThemeManager.applyCustomThemeVariables(ThemeManager.customThemeConfig);
+        });
+
+        // 背景类型切换
+        const bgBtns = DOMCache.getAllBySelector('.bg-type-btn');
+        bgBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const type = btn.dataset.type;
+                ThemeManager.customThemeConfig.bgType = type;
+                
+                bgBtns.forEach(b => b.classList.toggle('active', b === btn));
+                DOMCache.get('solidBgPicker').style.display = type === 'solid' ? 'flex' : 'none';
+                DOMCache.get('gradientBgPicker').style.display = type === 'gradient' ? 'flex' : 'none';
+                
+                ThemeManager.applyCustomThemeVariables(ThemeManager.customThemeConfig);
+            });
+        });
+
+        // 预设点击
+        const presets = {
+            'classic-dark': { primary: '#667eea', secondary: '#28283c', secondaryAlpha: 70, bgType: 'gradient', bgGradient1: '#1a1a2e', bgGradient2: '#16213e', mainText: '#e0e0e0', subText: '#8a9ba8' },
+            'ocean-blue': { primary: '#00c6ff', secondary: '#002147', secondaryAlpha: 70, bgType: 'gradient', bgGradient1: '#004e92', bgGradient2: '#000428', mainText: '#ffffff', subText: '#b0d4ff' },
+            'forest-green': { primary: '#a8e063', secondary: '#1b3a2b', secondaryAlpha: 75, bgType: 'gradient', bgGradient1: '#134e5e', bgGradient2: '#71b280', mainText: '#ffffff', subText: '#d4edda' },
+            'sunset-orange': { primary: '#ff9068', secondary: '#4a1d1d', secondaryAlpha: 70, bgType: 'gradient', bgGradient1: '#f46b45', bgGradient2: '#eea849', mainText: '#ffffff', subText: '#ffeadb' },
+            'sakura-pink': { primary: '#ff758c', secondary: '#4a2c3a', secondaryAlpha: 70, bgType: 'gradient', bgGradient1: '#ff9a9e', bgGradient2: '#fecfef', mainText: '#ffffff', subText: '#ffe0e6' },
+            'midnight-purple': { primary: '#9d50bb', secondary: '#240b36', secondaryAlpha: 80, bgType: 'gradient', bgGradient1: '#232526', bgGradient2: '#414345', mainText: '#e0e0e0', subText: '#a0a0a0' }
+        };
+
+        DOMCache.getAllBySelector('.preset-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const name = item.dataset.name;
+                const preset = presets[name];
+                if (preset) {
+                    // 合并预设到当前配置
+                    ThemeManager.customThemeConfig = { ...ThemeManager.customThemeConfig, ...preset };
+                    // 更新 UI 并应用
+                    ThemeManager.openEditor(); // 重新调用以刷新输入框
+                    ThemeManager.applyCustomThemeVariables(ThemeManager.customThemeConfig);
+                }
+            });
+        });
     },
 
     initToggleSettings() {
@@ -2524,6 +2702,9 @@ async function load_theme(theme,from_fit) {
             themeCSS.href = CONSTANTS.THEME_PATHS[theme];
         }
         document.documentElement.setAttribute('data-theme', theme);
+        if (theme === 'custom') {
+            ThemeManager.applyCustomThemeVariables(ThemeManager.customThemeConfig);
+        }
         NavigationManager.refreshCurrentPath();
         render_class_btn()
         console.log(`主题已切换到: ${theme}`);
@@ -2666,6 +2847,7 @@ window.addEventListener('pywebviewready', async function () {
 
         // 初始化设置
         await ConfigManager.updateDefaultDirectory();
+        await ThemeManager.initCustomTheme();
 
         // 加载默认文件
         const config = await ApiHelper.getConfig();
