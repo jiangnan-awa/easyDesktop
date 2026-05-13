@@ -25,6 +25,8 @@ class hotkeyMgr:
 
 
     def hotKey_action(self):
+        if windowMgr.ignore_action == True:
+            return
         try:
             if windowMgr.window_state == False:
                 windowMgr.key_quick_start = True
