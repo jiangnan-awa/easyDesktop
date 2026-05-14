@@ -423,6 +423,11 @@ const UIUtils = {
             fileElement.classList.remove("file-item_hover");
         }, CONSTANTS.REMIND_DURATION);
     },
+    remindFiles(fileElements) {
+        fileElements.forEach(fileElement => {
+            this.remindFile(fileElement);
+        });
+    },
 
     // 滚动控制相关的私有变量
     _scrollDisabled: false,
@@ -1193,17 +1198,19 @@ const FileOperationManager = {
 
     async pasteFiles() {
         const result = await ApiHelper.putFile(AppState.currentPath);
-        await NavigationManager.refreshCurrentPath();
+        await NavigationManager.refreshCurrentPath(false,false,true,true);
 
         if (result.files) {
             setTimeout(() => {
+                var e_list = []
                 result.files.forEach(filePath => {
                     const fileId = Utils.generateFileId(filePath);
                     const element = DOMCache.get(fileId);
                     if (element) {
-                        UIUtils.remindFile(element);
+                        e_list.push(element);
                     }
                 });
+                UIUtils.remindFiles(e_list);
             }, 200);
         }
 
@@ -3104,8 +3111,10 @@ window.addEventListener("keydown", function(event) {
     if (event.key === 'Enter') {
         // 输入框活跃或对话框打开时不触发文件点击
         // if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+        event.preventDefault();
         if (DOMCache.get("renameOverlay").style.display === "flex") return;
         if (DOMCache.get("groupDeleteConfirm").style.display === "flex") return;
+        if (DOMCache.get("themeSettingsPanel").style.display === "flex")return;
         for(let e of [...document.getElementById("filesContainer").children,...document.getElementById("filesListContainer").children]){
             if(e.style.display != "none" && enter_click==false){
                 enter_click = true

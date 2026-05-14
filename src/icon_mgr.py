@@ -64,9 +64,6 @@ class icon_mgr():
                     print(f"已更新图标缓存: {item} -> {data[item]}")
             else:
                 print(f"错误: {data['error']}")
-        else:
-            print(f"错误: {result.stderr}")
-            return f"错误: {result.stderr}"
     def icon_file(self,file_path):
         # return getIcon.match_ico(file_name)
         return getIcon.get_fileIcon(file_path)
