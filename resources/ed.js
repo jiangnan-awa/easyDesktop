@@ -1106,6 +1106,7 @@ const ThemeManager = {
     openEditor() {
         const overlay = DOMCache.get('themeEditorOverlay');
         const config = this.customThemeConfig;
+        DOMCache.get("themeSettings_box").style.display = 'none';
 
         // 设置表单值
         DOMCache.get('primaryColorPicker').value = config.primary;
@@ -1138,12 +1139,14 @@ const ThemeManager = {
         await ApiHelper.updateConfig('userTheme', this.originalCustomTheme);
         DOMCache.get('themeEditorOverlay').style.display = 'none';
         ApiHelper.call('unlock_window_visibility');
+        DOMCache.get("themeSettings_box").style.display = 'block';
     },
 
     cancelEdit() {
         this.customThemeConfig = JSON.parse(JSON.stringify(this.originalCustomTheme));
         this.applyCustomThemeVariables(this.customThemeConfig);
         DOMCache.get('themeEditorOverlay').style.display = 'none';
+        DOMCache.get("themeSettings_box").style.display = 'block';
     }
 };
 
@@ -1845,7 +1848,16 @@ const EventManager = {
              });
          }
 
-        // 关闭按钮
+         // 编辑图标按钮点击
+         const themeEditIconBtn = DOMCache.get('themeEditIconBtn');
+         if (themeEditIconBtn) {
+             themeEditIconBtn.addEventListener('click', (e) => {
+                 e.stopPropagation(); // 防止触发卡片的单击应用主题
+                 ThemeManager.openEditor();
+             });
+         }
+
+         // 关闭按钮
         DOMCache.get('closeThemeEditor').addEventListener('click', () => ThemeManager.cancelEdit());
         DOMCache.get('cancelThemeEdit').addEventListener('click', () => ThemeManager.cancelEdit());
         DOMCache.get('confirmThemeEdit').addEventListener('click', () => ThemeManager.saveCustomTheme());
@@ -2211,8 +2223,17 @@ const EventManager = {
     },
  
     async setIcon(){
-        await ApiHelper.call("setIcon", AppState.selectedFile.filePath,AppState.selectedFile.edit_ico==undefined)
-        NavigationManager.refreshCurrentPath()
+        r=await ApiHelper.call("setIcon", AppState.selectedFile.filePath,AppState.selectedFile.edit_ico==undefined)
+        if(r["success"]==true){
+            NavigationManager.refreshCurrentPath(false,false,false,true)
+        }else{
+            if(r["message"]){
+                if(r["message"]!="未选择图标"){
+                    UIUtils.showMessage(r["message"],true)
+                }
+            }
+        }
+        
     }
 };
 
@@ -2734,7 +2755,6 @@ async function load_theme(theme,from_fit) {
 async function load_bgType(tid){
     if(tid=="1"){
         document.body.style.background = ""
-        document.body.style.backgroundColor = "unset"
     }else if(tid=="2"){
         document.body.style.background = "unset"
         document.body.style.backgroundColor = "rgba(0,0,0,0)"

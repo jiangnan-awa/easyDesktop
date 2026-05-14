@@ -267,8 +267,8 @@
     --rename-overlay-bg: rgba(0, 0, 0, 0.5);
     --rename-container-bg: var(--custom-bg);
     --rename-title-color: var(--custom-text-main);
-    --rename-input-bg: var(--custom-text-main);
-    --rename-input-color: var(--custom-secondary);
+    --rename-input-bg: var(--custom-secondary);
+    --rename-input-color: var(--custom-text-main);
     --rename-btn-confirm-bg: var(--custom-primary);
     --rename-btn-cancel-bg: var(--custom-text-sub);
     --delete-container-bg: var(--custom-secondary);
@@ -405,11 +405,6 @@ body {
     color: var(--view-btn-hover-color);
 }
 
-.view-btn.active {
-    background: var(--view-btn-active-bg);
-    color: var(--view-btn-hover-color);
-}
-
 .context-menu {
     background: var(--context-menu-bg);
 }
@@ -460,7 +455,7 @@ body {
 
 .rename-btn.cancel {
     background: var(--rename-btn-cancel-bg);
-    color: #333;
+    color: var(--text-color);
 }
 
 [data-theme="zzz"] .rename-btn.cancel {
@@ -508,8 +503,13 @@ body {
 }
 
 .settings-btn {
-    background: var(--settings-btn-bg);
-    color: var(--settings-btn-color);
+    color: var(--view-btn-color);
+    background: rgba(0, 0, 0, 0);
+}
+
+ .settings-btn:hover {
+    background: var(--view-btn-hover-bg);
+    color: var(--view-btn-hover-color);
 }
 
 .theme-settings-panel {
@@ -652,7 +652,10 @@ input:checked + .slider {
     color: var(--text-color);
     box-shadow: 0 0 5px rgba(93, 173, 226, 0.5);
 }
-
+.setting_note {
+    font-size: 10px;
+    color: var(--file-type-color);
+}
 [data-theme="light"] .dir_btn_active {
     color: white;
 }
