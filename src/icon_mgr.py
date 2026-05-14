@@ -14,11 +14,11 @@ class icon_mgr():
         self.icon_cache[file_path] = icon_path
         
     def call_iconGetter(self,path,temp=True):
-        print("调用图标获取器: ", path)
         result = subprocess.run(
             cfg.iconGetter({"path": path,"temp":temp}),
             capture_output=True,
-            text=True
+            text=True,
+            encoding="utf-8"
         )
         if result.returncode == 0:
             lines = result.stdout.strip().split('\n')
@@ -29,6 +29,11 @@ class icon_mgr():
                 bugs_report("python-iconGetter_parse", f"图标获取器返回数据解析失败: {traceback.format_exc()}",True,result.stdout.strip())
         else:
             data = None
+            try:
+                err_info = result.stderr.strip()
+            except:
+                err_info = "获取失败"
+            bugs_report("python-iconGetter_parse", f"图标获取器失败: {err_info}",True)
         return data
     def update(self,path,temp=True):
         # 先验证有无exe图标
@@ -59,9 +64,6 @@ class icon_mgr():
                     print(f"已更新图标缓存: {item} -> {data[item]}")
             else:
                 print(f"错误: {data['error']}")
-        else:
-            print(f"错误: {result.stderr}")
-            return f"错误: {result.stderr}"
     def icon_file(self,file_path):
         # return getIcon.match_ico(file_name)
         return getIcon.get_fileIcon(file_path)

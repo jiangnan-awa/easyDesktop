@@ -10,14 +10,13 @@
     <title>easyDesktop</title>
     <link rel="stylesheet" href="/resources/all.min.css">
     <link rel="stylesheet" href="/theme/frame.css">
-    <link rel="stylesheet" id="theme_css" href="/theme/dark.css">
+    <link rel="stylesheet" id="theme_css" href="/theme/theme.css">
     <style>
         body {
             margin: unset;
             padding-top: 0px;
             padding-bottom: 0px;
             overflow: hidden;
-            background-color: rgba(0, 0, 0, 0);
         }
 
         body::-webkit-scrollbar {
@@ -183,18 +182,20 @@
             left: 10px;
             top: 10px;
             display: none;
+            transition: 0.3s;
         }
         .file-list-cl{
             width: 1.1%;
             margin-right: 10px;
+            transition: 0.3s;
         }
         .file-cl:hover{
-            scale: 1.5;
-            transition: all 0.5s;
+            scale: 1.3;
+            /* transition: all 0.3s; */
         }
         .file-list-cl:hover{
             scale: 1.3;
-            transition: all 0.5s;
+            /* transition: all 0.3s; */
         }
         .file-item:hover .file-list-cl{
             display: block;
@@ -282,7 +283,7 @@
                     </div>
                 </div>
                 <div class="view-toggle">
-                    <button id="displayToggleBtn" class="view-btn active"><i class="fas fa-th-large"></i></button>
+                    <button id="displayToggleBtn" class="view-btn"><i class="fas fa-th-large"></i></button>
                     <!-- <button id="plug_btn" class="view-btn"><i class="fas fa fa-laptop"></i></button> -->
                 </div>
                 <button id="settingsBtn" class="settings-btn"><i class="fas fa-cog"></i></button>
@@ -334,7 +335,7 @@
                 <i class="fas fa-chevron-right" style="margin-left:auto;margin-right:0;font-size:10px;"></i>
             </div>
             <div class="context-menu-item delete" id="menuDelete">
-                <i class="fas fa-trash-alt"></i>
+                <i class="fas fa-trash-alt" style="color: #ff6366;"></i>
                 <span>删除</span>
             </div>
         </div>
@@ -510,6 +511,8 @@
             top: 0px;
             left: 0px;
             position: fixed;
+            backdrop-filter: blur(10px);
+            transition: 0.3s ease-in-out;
         }
 
         /* 背景设置样式 */
@@ -583,11 +586,6 @@
             margin-top: 15px;
         }
 
-        .setting_note {
-            font-size: 10px;
-            color: rgb(163, 163, 163);
-        }
-
         .cf_type_toggle {
             width: 50%;
             padding: 5px 10px;
@@ -639,7 +637,7 @@
         }
 
         .dir_btn:hover {
-            background-color: #f7f7f7;
+            background-color: #c8c8c8;
             color: black;
         }
 
@@ -705,6 +703,16 @@
                     </div>
                 </div>
                 <p id="sys_note" class="setting_note">在桌面显示此电脑、回收站、控制面板</p>
+                <div class="settings-section">
+                    <div class="system-theme-toggle">
+                        <span>显示隐藏文件</span>
+                        <label class="switch">
+                            <input type="checkbox" id="showHiddenToggle">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                </div>
+                <p id="showHidden_note" class="setting_note">显示隐藏的项目</p>
                 <div class="settings-section">
                     <div class="system-theme-toggle">
                         <span>使用图片预览</span>
@@ -863,6 +871,13 @@
                             </div>
                             <span>3Z主题</span>
                         </div>
+                        <div class="theme-card" data-theme="custom" id="customThemeCard" title="右键编辑">
+                            <div class="theme-preview">
+                                <img src="/resources/theme_previews/custom.png" alt="绝区零主题预览">
+                                <button class="theme-edit-btn" id="themeEditIconBtn"><i class="fas fa-edit"></i></button>
+                            </div>
+                            <span>自定义主题</span>
+                        </div>
                     </div>
                 </div>
                 <div class="settings-section" id="bg_setting" style="margin-top: 20px;">
@@ -1016,6 +1031,220 @@
             color: #f1c40f;
             font-weight: bold;
         }
+
+        .theme-card-content {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+        }
+
+        .theme-edit-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s, background 0.2s;
+            z-index: 5;
+        }
+
+        .theme-card:hover .theme-edit-btn {
+            opacity: 1;
+        }
+
+        .theme-edit-btn:hover {
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        /* 主题编辑器样式 */
+        .theme-editor-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 4000;
+        }
+
+        .theme-editor-container {
+            width: 450px;
+            height: 90%;
+            /* overflow: scroll; */
+            background: var(--settings-panel-bg, #1e1e28);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+            color: var(--text-color, #e0e0e0);
+        }
+
+        .theme-editor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .theme-editor-header h3 {
+            margin: 0;
+            font-size: 20px;
+        }
+
+        .theme-editor-body {
+            max-height: calc(100% - 65px);
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .theme-editor-body::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .theme-editor-body::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+
+        .editor-section {
+            margin-bottom: 25px;
+        }
+
+        .editor-section h4 {
+            margin-bottom: 15px;
+            font-size: 16px;
+            opacity: 0.8;
+        }
+
+        .picker-item {
+            margin-bottom: 15px;
+        }
+
+        .picker-item label {
+            display: block;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .picker-item input[type="color"] {
+            width: 100%;
+            height: 40px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background: none;
+        }
+
+        .color-alpha-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .color-alpha-group input[type="range"] {
+            flex: 1;
+        }
+
+        .color-alpha-group span {
+            font-size: 13px;
+            width: 40px;
+        }
+
+        .bg-type-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .bg-type-btn {
+            flex: 1;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+            color: inherit;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .bg-type-btn.active {
+            background: var(--custom-primary, #667eea);
+            border-color: transparent;
+            color: white;
+        }
+
+        .picker-sub-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .theme-presets {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 10px;
+        }
+
+        .preset-item {
+            aspect-ratio: 1;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: transform 0.2s;
+        }
+
+        .preset-item:hover {
+            transform: scale(1.1);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .theme-editor-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .editor-btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .editor-btn.cancel {
+            background: rgba(255, 255, 255, 0.1);
+            color: inherit;
+        }
+
+        .editor-btn.confirm {
+            background: var(--custom-primary, #667eea);
+            color: white;
+        }
+
+        .editor-btn:hover {
+            filter: brightness(1.1);
+        }
     </style>
     <!-- 快捷键记录模态框 -->
     <div class="modal-overlay" id="modalOverlay">
@@ -1052,6 +1281,77 @@
     </style>
     <div class="message_box">
         <p id="err_message"></p>
+    </div>
+    <div id="themeEditorOverlay" class="theme-editor-overlay">
+        <div class="theme-editor-container">
+            <div class="theme-editor-header">
+                <h3>编辑自定义主题</h3>
+                <button id="closeThemeEditor" class="close-btn"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="theme-editor-body">
+                <div class="editor-section">
+                    <h4>颜色设置</h4>
+                    <div class="color-pickers">
+                        <div class="picker-item">
+                            <label>主颜色 (图标/按钮)</label>
+                            <input type="color" id="primaryColorPicker">
+                        </div>
+                        <div class="picker-item">
+                            <label>副颜色 (面板/悬浮)</label>
+                            <div class="color-alpha-group">
+                                <input type="color" id="secondaryColorPicker">
+                                <input type="range" id="secondaryAlphaPicker" min="0" max="100" value="70">
+                                <span id="secondaryAlphaValue">70%</span>
+                            </div>
+                        </div>
+                        <div class="picker-item">
+                            <label>背景颜色</label>
+                            <div class="bg-type-selector">
+                                <button class="bg-type-btn active" data-type="solid">纯色</button>
+                                <button class="bg-type-btn" data-type="gradient">渐变</button>
+                            </div>
+                            <div id="solidBgPicker" class="picker-sub-item">
+                                <input type="color" id="bgColorPicker">
+                            </div>
+                            <div id="gradientBgPicker" class="picker-sub-item" style="display: none;">
+                                <input type="color" id="bgGradient1">
+                                <i class="fas fa-arrow-right"></i>
+                                <input type="color" id="bgGradient2">
+                            </div>
+                        </div>
+                        <div class="picker-item">
+                            <label>主标题颜色</label>
+                            <input type="color" id="mainTextColorPicker">
+                        </div>
+                        <div class="picker-item">
+                            <label>副标题颜色</label>
+                            <input type="color" id="subTextColorPicker">
+                        </div>
+                    </div>
+                </div>
+                <div class="editor-section">
+                    <h4>配色预设</h4>
+                    <div class="theme-presets">
+                        <div class="preset-item" data-name="classic-dark" title="经典深色" style="background: #1a1a2e;"></div>
+                        <div class="preset-item" data-name="ocean-blue" title="海洋蓝" style="background: #004e92;"></div>
+                        <div class="preset-item" data-name="forest-green" title="森林绿" style="background: #134e5e;"></div>
+                        <div class="preset-item" data-name="sunset-orange" title="落日橙" style="background: #f46b45;"></div>
+                        <div class="preset-item" data-name="sakura-pink" title="樱花粉" style="background: #ff9a9e;"></div>
+                        <div class="preset-item" data-name="midnight-purple" title="深夜紫" style="background: #232526;"></div>
+                        <div class="preset-item" data-name="cyberpunk" title="赛博朋克" style="background: #120458; border-color: #ff00ff;"></div>
+                        <div class="preset-item" data-name="matcha" title="清新抹茶" style="background: #8fb9a8;"></div>
+                        <div class="preset-item" data-name="mocha" title="摩卡咖啡" style="background: #3d2b1f;"></div>
+                        <div class="preset-item" data-name="nordic" title="北欧极简" style="background: #d8dee9;"></div>
+                        <div class="preset-item" data-name="golden" title="金秋时光" style="background: #f6d365;"></div>
+                        <div class="preset-item" data-name="deep-sea" title="深海幽蓝" style="background: #0b2d39;"></div>
+                    </div>
+                </div>
+                <div class="theme-editor-footer">
+                    <button id="cancelThemeEdit" class="editor-btn cancel">取消</button>
+                    <button id="confirmThemeEdit" class="editor-btn confirm">确认并应用</button>
+                </div>
+            </div>
+        </div>
     </div>
 </body>
 <script src="/resources/ed.js"></script>

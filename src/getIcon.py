@@ -13,7 +13,14 @@ import win32api
 import win32con
 import win32ui
 from PIL import Image
-from icoextract import IconExtractor
+from icoextract import IconExtractor  
+
+try:
+    if os.path.exists("./temp"):
+        shutil.rmtree("./temp")
+        os.makedirs("./temp")
+except Exception:
+    pass
 
 def _ensure_dir(path: str):
     if not os.path.exists(path):
@@ -335,11 +342,15 @@ def get_shortcut_target(shortcut_path,sec=False):
     shortcut = shell.CreateShortcut(shortcut_path)
     target = shortcut.TargetPath
     if target == "" and sec==False:
-        if not os.path.exists("temp"):
-            os.makedirs("temp")
-        shutil.copy(shortcut_path, "temp/temp.lnk")
-        target = get_shortcut_target("temp/temp.lnk",True)
-        os.remove("temp/temp.lnk")
+        if not os.path.exists("./temp"):
+            os.makedirs("./temp")
+        temp_name = str(int(time.time())) + ".lnk"
+        shutil.copy(shortcut_path, "./temp/" + temp_name)
+        target = get_shortcut_target(f"./temp/{temp_name}",True)
+        try:
+            os.remove(f"./temp/{temp_name}")
+        except Exception:
+            pass
     return target
 
 def match_ico(file_name):

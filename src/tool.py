@@ -160,7 +160,7 @@ def is_desktop_and_mouse_in_corner(wait=0):
     # try:
     screen_width = win32api.GetSystemMetrics(cfg.SM_CXSCREEN)
     screen_height = win32api.GetSystemMetrics(cfg.SM_CYSCREEN)
-    corner_size = cfg.cornerSize_m[ucfg.data["corner_size"]]  # 角落区域的边长
+    corner_size = cfg.cornerSize_m[ucfg.data["corner_size"]][0]  # 角落区域的边长
     if ucfg.data["outPos"]=="1":
         corner_rect = (0, screen_height - corner_size, corner_size, screen_height)
     elif ucfg.data["outPos"]=="2":

@@ -21,18 +21,28 @@ class hotkeyMgr:
     def __init__(self):
         self.hotKey = ""
         self.event = None
+        self.hadCreate_task = False
+
 
     def hotKey_action(self):
-        if windowMgr.window_state == False:
-            windowMgr.key_quick_start = True
-        else:
-            windowMgr.fullscreen_close = True
-        windowMgr.window.evaluate_js("document.body.focus()")
+        if windowMgr.ignore_action == True:
+            return
+        try:
+            if windowMgr.window_state == False:
+                windowMgr.key_quick_start = True
+            else:
+                windowMgr.fullscreen_close = True
+            windowMgr.call_js("document.body.focus()")
+        except:
+            self.reRegister()
 
     def register(self,hotKey):
+        self.hotKey = hotKey
         if self.event != None:
             keyboard.remove_hotkey(self.event)
         self.event = keyboard.add_hotkey(hotKey,self.hotKey_action)
+        if self.hadCreate_task == False:
+            hotkeyReg.reRegTask()
     def hotkey_init(self):
         if ucfg.data["cf_type"]=="2":
             self.register("left windows+shift")
@@ -40,6 +50,19 @@ class hotkeyMgr:
             self.register("left windows+escape")
         if ucfg.data["cf_type"]=="4":
             self.register(ucfg.data["cf_hotkey"])
+    def reRegister(self):
+        self.register(self.hotKey)
+    def reRegisterTaskAction(self):
+        print("reRegisterTaskAction start")
+        while True:
+            self.register(self.hotKey)
+            time.sleep(300)
+    def reRegTask(self):
+        if self.hadCreate_task == True:
+            return
+        self.hadCreate_task = True
+        Thread(target=self.reRegisterTaskAction, daemon=True).start()
+
 
 hotkeyReg = hotkeyMgr()
 
@@ -143,6 +166,11 @@ class windowMgr_main():
         self.ignore_action = True
     def enable_autoClose(self):
         self.ignore_action = False
+    def call_js(self,js_code):
+        try:
+            self.window.evaluate_js(js_code)
+        except:
+            print(f"调用js失败: {js_code}")
         
     def animateWindow(
         self,start_x, start_y, end_x, end_y, width, height, steps=cfg.ANIMATION_STEPS, delay=cfg.ANIMATION_DELAY
@@ -171,7 +199,7 @@ class windowMgr_main():
             return
         self.moving = True
         self.window_state = True
-        self.window.evaluate_js("document.getElementById('themeSettingsPanel').style.display='none';enableScroll();load_search();")
+        self.window.evaluate_js("document.getElementById('themeSettingsPanel').style.display='none';enableScroll();")
         if ucfg.data["full_screen"] == True:
             w,h = screen.get_screen_size()
             self.window.resize(w, h)
@@ -218,7 +246,7 @@ class windowMgr_main():
         print("outwindow_ani")
         self.animateWindow(start_x, start_y, end_x, end_y, rect["width"], rect["height"])
         self.window.evaluate_js("window_state=true;")
-        self.window.evaluate_js("NavigationManager.refreshCurrentPath(true,false);fit_btnBar();")
+        self.window.evaluate_js("NavigationManager.refreshCurrentPath(true,false,false);fit_btnBar();")
 
         tool.mouseState.reset()
         while True:
@@ -229,7 +257,7 @@ class windowMgr_main():
                 or (tool.mouseState.get_state()==True and tool.is_ed_focused()==False)
             ):
                 break
-            if ucfg.data["out_cf_type"] == "1" and tool.is_mouse_in_easyDesktop() == True:
+            if ucfg.data["out_cf_type"] == "1" and (tool.is_mouse_in_easyDesktop() == True or (tool.mouseState.get_state()==True and tool.is_ed_focused()==False)):
                 break
             if ucfg.data["fdr"] == True and tool.is_focused_window_fullscreen() == True:
                 break
@@ -315,7 +343,7 @@ class windowMgr_main():
                 self.out_window()
                 break
             else:
-                if tool.is_desktop_and_mouse_in_corner(wait=0.2) and ucfg.data["cf_type"] == "1":
+                if tool.is_desktop_and_mouse_in_corner(wait=cfg.cornerSize_m[ucfg.data["corner_size"]][1]) and ucfg.data["cf_type"] == "1":
                     self.out_window()
                     break
             if self.window_state == True:
@@ -327,12 +355,14 @@ class windowMgr_main():
         if ucfg.data["themeChangeType"]=="2":
             color_r = tool.is_screenshot_light((end_x,end_y,end_x+width,end_y+height),threshold=0.4)
             if color_r == True:
-                self.window.evaluate_js("load_theme('light',true)")
+                if ucfg.data["theme"]!="custom":
+                    self.window.evaluate_js("load_theme('light',true)")
                 if ucfg.data['blur_bg']==True:
                     WindowEffect.setLightBlurEffect(self.hwnd,effect=ucfg.data["blur_effect"])
                     print("from fbe")
             else:
-                self.window.evaluate_js("load_theme('dark',true)")
+                if ucfg.data["theme"]!="custom":
+                    self.window.evaluate_js("load_theme('dark',true)")
                 if ucfg.data['blur_bg']==True:
                     WindowEffect.setDarkBlurEffect(self.hwnd,effect=ucfg.data["blur_effect"])
                     print("from fbe")
@@ -430,6 +460,6 @@ class windowMgr_main():
         if part == "cf_type" or part == "cf_hotkey":
             hotkeyReg.hotkey_init()
     def call_refresh(self):
-        self.window.evaluate_js("document.getElementById('b2d').click();fit_btnBar();")
+        self.window.evaluate_js("document.getElementById('b2d').click();fit_btnBar();scroll_top();")
 
 windowMgr = windowMgr_main()

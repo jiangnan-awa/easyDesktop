@@ -70,11 +70,20 @@ class userFileUpdateMgr:
                     order_list.append(item["filePath"])
                 config["dir_order"][path_key] = order_list
         json.dump(config, open(os.path.join(self.install_path,"config.json"),"w",encoding="utf-8"))
+    def update_263(self):
+        del_list = ["_internal/VCRUNTIME140.dll","_internal/VCRUNTIME140_1.dll"]
+        try:
+            for file in del_list:
+                if os.path.exists(os.path.join(self.install_path,file)):
+                    os.remove(os.path.join(self.install_path,file))
+        except:
+            pass
     def updateAction(self):
         if not hasattr(self, "user_config"):
             return
         actions = {
             230:self.update_230,
+            263:self.update_263,
         }
         version = self.user_config["version"] if "version" in self.user_config else "0.0.0"
         version = int(version.replace(".",""))
@@ -228,7 +237,7 @@ def un_install():
                         break
                     sleep(0.5)
         download_inf_var.set("正在删除文件")
-        shutil.rmtree(check_registry_key())
+        shutil.rmtree(check_registry_key(),ignore_errors=True)
         pythoncom.CoInitialize()
         if os.path.exists(os.path.join(os.path.expanduser("~"), "Desktop","EasyDesktop.lnk")):
             os.remove(os.path.join(os.path.expanduser("~"), "Desktop","EasyDesktop.lnk"))
@@ -257,27 +266,6 @@ def install():
         uf_mgr = userFileUpdateMgr(install_path)
         uf_mgr.backup_userFile()
 
-        # if os.path.exists(os.path.join(install_path,"config.json")):
-        #     user_config = json.load(open(os.path.join(install_path,"config.json"),"r",encoding="utf-8"))
-        # else:
-        #     user_config = None
-        # if os.path.exists(os.path.join(install_path,"cl_data.json")):
-        #     cl_data = json.load(open(os.path.join(install_path,"cl_data.json"),"r",encoding="utf-8"))
-        # else:
-        #     cl_data = None
-        # if os.path.exists(os.path.join(install_path,"user_class.json")):
-        #     user_class = json.load(open(os.path.join(install_path,"user_class.json"),"r",encoding="utf-8"))
-        # else:
-        #     user_class = None
-        # copy_bg=False
-        # if user_config!=None:
-        #     if user_config["use_bg"]==True:
-        #         if os.path.exists(os.path.join(install_path,user_config["bg"])):
-        #             try:
-        #                 shutil.copy2(os.path.join(install_path,user_config["bg"]),user_config["bg"])
-        #                 copy_bg=True
-        #             except:
-        #                 pass
         progressbar["mode"]="indeterminate"
         progressbar["orient"]=tkinter.HORIZONTAL
         if os.listdir(install_path)!=[]:
@@ -321,8 +309,11 @@ def install():
             extracted_files = 0
             for file in zip_ref.infolist():
                 extracted_files += 1
-                if not os.path.exists(file.filename):
-                    zip_ref.extract(file, install_path)
+                try:
+                    if not os.path.exists(file.filename):
+                        zip_ref.extract(file, install_path)
+                except:
+                    pass
                 progress = (extracted_files / total_files) * 100
                 progress_num = int(progress)
                 progressbar['value']=int(progress_num)

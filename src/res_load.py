@@ -1,3 +1,4 @@
+from ntpath import isfile
 from src import getIcon # 本地模块源
 from src.icon_mgr import iconMgr
 
@@ -12,6 +13,7 @@ import traceback
 
 import base64
 import io
+import stat
 
 import configparser
 from src.windowMgr import windowMgr
@@ -25,7 +27,12 @@ desktop_path = tool.get_desktop_path()
 public_desktop = os.path.join(os.environ["PUBLIC"], "Desktop")
 
 
-
+def is_hidden(filepath):
+    """检查文件是否具有隐藏属性"""
+    try:
+        return bool(os.stat(filepath).st_file_attributes & stat.FILE_ATTRIBUTE_HIDDEN)
+    except:
+        return False
 class resource_load:
     def __init__(self):
         self.last_update_time = 0
@@ -176,13 +183,11 @@ class resource_load:
             info["realPath"] = real_path
         if ext == ".url":
             try:
-                print(file_path)
                 url = self.get_url_from_url_file(file_path)
                 if "steam://rungameid" in url:
                     info["fileType"] = "SteamGame"
             except:
                 print("url解析失败")
-                print(file_path)
         if ext in [".exe",".EXE",".url"]:
             # print(file_path)
             ft = "exe"
@@ -191,7 +196,7 @@ class resource_load:
         else:
             ft = "file"
         return {"inf_type":ft,"inf":info}
-    def load_items(self,dir_path):
+    def load_items(self,dir_path,ignore_icno=False):
         exe_data = []
         dir_data = []
         file_data = []
@@ -200,7 +205,7 @@ class resource_load:
             if not os.path.exists(dir_path):
                 dir_path = "desktop"
                 ucfg.update_config("df_dir", dir_path)
-                windowMgr.window.evaluate_js('UIUtils.showError("自定义目录不存在，已自动切换到桌面")')
+                windowMgr.call_js('UIUtils.showError("自定义目录不存在，已自动切换到桌面")')
 
         if dir_path == "desktop":
             get_count = 2
@@ -210,13 +215,19 @@ class resource_load:
             path_list = [dir_path]
         for i in range(get_count):
             current_dir = path_list[i]
-            iconMgr.update(current_dir)
+            if ignore_icno==False:
+                iconMgr.update(current_dir)
             for item in os.listdir(current_dir):
                 try:
                     if "desktop.ini" == item:
                         continue
-                    filename, _ = os.path.splitext(item) # 文件名
                     full_path = os.path.join(current_dir, item) # 完整路径
+                    if not ucfg.data["show_hidden_file"] and is_hidden(full_path):
+                        continue
+                    if os.path.isfile(full_path):
+                        filename, _ = os.path.splitext(item) # 文件名
+                    else:
+                        filename = item
 
                     ico = iconMgr.get_icon(full_path,filename)
                     if os.path.isfile(full_path):
@@ -264,22 +275,22 @@ class resource_load:
             dir_path = "desktop"
         exe_data,dir_data,file_data = self.load_items(dir_path)
         self.write_temp(dir_path,{"exe": exe_data,"dir": dir_data,"file": file_data})
-        now_path = windowMgr.window.evaluate_js("AppState.currentPath")
+        now_path = windowMgr.call_js("AppState.currentPath")
         if now_path == dir_path:
-            windowMgr.window.evaluate_js("NavigationManager.refreshCurrentPath(true,false)")
+            windowMgr.window.evaluate_js("NavigationManager.refreshCurrentPath(true,false,false)")
     def delay_update(self,dir_path):
         print(time.time()-self.last_update_time)
         if time.time()-self.last_update_time>2:
             print("update")
             Thread(target=self.delay_update_action,args=(dir_path,)).start()
         
-    def get_items(self,dir_path,quick_update=True):
+    def get_items(self,dir_path,quick_update=True,ignore_icno=False):
         if quick_update==False:
             print("及时更新")
-            return self.load_items(dir_path)
+            return self.load_items(dir_path,ignore_icno)
         temp_data = self.read_temp(dir_path)
         if temp_data==None:
-            return self.load_items(dir_path)
+            return self.load_items(dir_path,ignore_icno)
         else:
             self.delay_update(dir_path)
             return temp_data["exe"],temp_data["dir"],temp_data["file"]
@@ -416,13 +427,13 @@ class resource_load:
             item['index'] = i
         return {"data":out_data}
 
-    def update_inf(self,dir_path,quick_update=True):
+    def update_inf(self,dir_path,quick_update=True,ignore_icno=False):
         try:
             if dir_path == "/\\":
                 dir_path = "desktop"
 
             # global config
-            exe_data,dir_data,file_data = self.get_items(dir_path,quick_update)
+            exe_data,dir_data,file_data = self.get_items(dir_path,quick_update,ignore_icno)
             return self.order_items(dir_path,exe_data,dir_data,file_data)
             
             

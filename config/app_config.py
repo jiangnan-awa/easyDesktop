@@ -7,8 +7,8 @@ import sys
 import json
 
 # ===== 应用程序基本信息 =====
-APP_VERSION = "2.6.2"
-APP_VERSION_CODE = 2620
+APP_VERSION = "2.7.1"
+APP_VERSION_CODE = 2710
 APP_NAME = "EasyDesktop"
 DEFAULT_WINDOW_TITLE = "EasyDesktop_Main"
 
@@ -151,9 +151,9 @@ DEFAULT_DIR_ICON = "./resources/file_icos/dir.png"
 API_URL = "https://api.codevicent.xyz/"
 
 cornerSize_m={
-    "1":1,
-    "2":10,
-    "3":30
+    "1":[1,0.3],
+    "2":[10,0.1],
+    "3":[25,0]
 }
 
 # ===== 应用程序默认配置 =====
@@ -200,7 +200,9 @@ def get_default_config(width, height):
         "dir_order":{},
         "class_order":[],
         "ico":{},
-        "dbc_action":"1"
+        "dbc_action":"1",
+        "show_hidden_file":False,
+        "custom":{}
     }
 
 # ===== 系统应用程序配置 =====

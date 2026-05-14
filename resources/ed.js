@@ -17,9 +17,10 @@ const CONSTANTS = {
     },
 
     THEME_PATHS: {
-        "dark": "/theme/dark.css",
-        "light": "/theme/light.css",
-        "zzz": "/theme/zzz.css"
+        "dark": "/theme/theme.css",
+        "light": "/theme/theme.css",
+        "zzz": "/theme/theme.css",
+        "custom": "/theme/theme.css"
     },
 
     CLICK_DELAY: 100,
@@ -220,8 +221,8 @@ const ApiHelper = {
         return await this.call('update_config', key, value);
     },
 
-    async getFileInfo(path,quick=true) {
-        var data = await this.call('get_fileinfo', path,quick);
+    async getFileInfo(path,quick=true,ign_icno=false) {
+        var data = await this.call('get_fileinfo', path,quick,ign_icno);
         AppState.filter_data = data["filter_data"];
         return data;
     },
@@ -261,6 +262,7 @@ const ApiHelper = {
     async cleanTemp() {
         await this.call('clean_temp');
         UIUtils.showMessage("缓存清理完成",false)
+        NavigationManager.refreshCurrentPath();
     },
 };
 
@@ -420,6 +422,11 @@ const UIUtils = {
         setTimeout(() => {
             fileElement.classList.remove("file-item_hover");
         }, CONSTANTS.REMIND_DURATION);
+    },
+    remindFiles(fileElements) {
+        fileElements.forEach(fileElement => {
+            this.remindFile(fileElement);
+        });
     },
 
     // 滚动控制相关的私有变量
@@ -788,8 +795,6 @@ const MenuManager = {
         // contextMenu.style.display = 'block';
         Utils.uiBoxDisplayChange(contextMenu,block,true)
         var scale_rate = config["scale"] / 100
-        console.log(e.pageX / scale_rate)
-        console.log((window.innerWidth-contextMenu.offsetWidth)/scale_rate)
         if((e.pageX / scale_rate)>((window.innerWidth-contextMenu.offsetWidth)/scale_rate)){
             contextMenu.style.left = `${(window.innerWidth - contextMenu.offsetWidth) / scale_rate}px`;
         }else{
@@ -875,23 +880,23 @@ const NavigationManager = {
         await this.updateBreadcrumb(path || '/');
 
         const result = await ApiHelper.getFileInfo(path);
+        if(AppState.currentPath!=path){
+            return
+        }
         AppState.setFiles(result.data);
-        DOMCache.get("content_box").scrollTo({
-            top: 0,
-            behavior: 'smooth',
-        })
         await fileRenderer.render(result.data);
-        window.scrollTo(0, 0);
         loadingUI.sets("items_ctn",false)
+        scroll_top();
     },
 
-    async refreshCurrentPath(quick_update=true,ani=true) {
+    async refreshCurrentPath(quick_update=true,ani=true,kws_clear=true,ign_icno=false) {
         return new Promise(async (resolve) => { 
-            console.log(quick_update)
             loadingUI.sets("items_ctn",true)
-            const result = await ApiHelper.getFileInfo(AppState.currentPath,quick_update);
+            const result = await ApiHelper.getFileInfo(AppState.currentPath,quick_update,ign_icno);
             // if(result.same==true)return;
-            DOMCache.get("search_input").value=""
+            if(kws_clear){
+                DOMCache.get("search_input").value=""
+            }
             AppState.setFiles(result.data);
             loadingUI.sets("items_ctn",false)
 
@@ -899,23 +904,18 @@ const NavigationManager = {
             if(last_group!="" || last_group!="全部"){
                 change_class(last_group)
             }
-
-            console.log(result)
             resolve(true);
         });
     },
 
     async updateBreadcrumb(path) {
-        console.log(path)
         const config = await ApiHelper.getConfig();
         const breadcrumb = DOMCache.get('breadcrumb');
         breadcrumb.innerHTML = '';
 
         const desktopPath = await ApiHelper.call('search_desktop_path');
         const basePath = config.df_dir === "desktop" ? desktopPath : config.df_dir;
-        console.log(basePath)
         const parts = path.replace(basePath, "").split('\\').filter(part => part.length > 0);
-        console.log(parts)
 
         // 添加根目录项
         const rootItem = document.createElement('span');
@@ -948,7 +948,6 @@ const NavigationManager = {
             item.dataset.path = currentPath;
             breadcrumb.appendChild(item);
         });
-        console.log("______")
     }
 };
 
@@ -1038,6 +1037,9 @@ const SearchManager = {
 // ========== 主题管理器 ==========
 const ThemeManager = {
     now_theme: 'light',
+    customThemeConfig: null,
+    originalCustomTheme: null,
+
     async applyBackgroundSettings(config) {
         if(config.bgType!="1")return;
         console.log("applyBackgroundSettings")
@@ -1056,6 +1058,95 @@ const ThemeManager = {
                 backdropFilter: ''
             });
         }
+    },
+
+    async initCustomTheme() {
+        const config = await ApiHelper.getConfig();
+        this.originalCustomTheme = config.userTheme || {
+            primary: '#667eea',
+            secondary: '#28283c',
+            secondaryAlpha: 70,
+            bgType: 'gradient',
+            bgColor: '#1a1a2e',
+            bgGradient1: '#1a1a2e',
+            bgGradient2: '#16213e',
+            mainText: '#e0e0e0',
+            subText: '#8a9ba8'
+        };
+        this.customThemeConfig = JSON.parse(JSON.stringify(this.originalCustomTheme));
+        this.applyCustomThemeVariables(this.customThemeConfig);
+    },
+
+    applyCustomThemeVariables(config) {
+        const root = document.documentElement;
+        root.style.setProperty('--custom-primary', config.primary);
+        
+        const secondary = config.secondary;
+        const alpha = config.secondaryAlpha / 100;
+        let rgbaSecondary = secondary;
+        if (secondary.startsWith('#')) {
+            const r = parseInt(secondary.slice(1, 3), 16);
+            const g = parseInt(secondary.slice(3, 5), 16);
+            const b = parseInt(secondary.slice(5, 7), 16);
+            rgbaSecondary = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+        root.style.setProperty('--custom-secondary', rgbaSecondary);
+
+        let bg;
+        if (config.bgType === 'solid') {
+            bg = config.bgColor;
+        } else {
+            bg = `linear-gradient(135deg, ${config.bgGradient1} 0%, ${config.bgGradient2} 100%)`;
+        }
+        root.style.setProperty('--custom-bg', bg);
+        root.style.setProperty('--custom-text-main', config.mainText);
+        root.style.setProperty('--custom-text-sub', config.subText);
+    },
+
+    openEditor() {
+        const overlay = DOMCache.get('themeEditorOverlay');
+        const config = this.customThemeConfig;
+        DOMCache.get("themeSettings_box").style.display = 'none';
+
+        // 设置表单值
+        DOMCache.get('primaryColorPicker').value = config.primary;
+        DOMCache.get('secondaryColorPicker').value = config.secondary;
+        DOMCache.get('secondaryAlphaPicker').value = config.secondaryAlpha;
+        DOMCache.get('secondaryAlphaValue').innerText = config.secondaryAlpha + '%';
+        
+        DOMCache.get('bgColorPicker').value = config.bgColor;
+        DOMCache.get('bgGradient1').value = config.bgGradient1;
+        DOMCache.get('bgGradient2').value = config.bgGradient2;
+        
+        DOMCache.get('mainTextColorPicker').value = config.mainText;
+        DOMCache.get('subTextColorPicker').value = config.subText;
+
+        // 背景类型按钮
+        const bgBtns = DOMCache.getAllBySelector('.bg-type-btn');
+        bgBtns.forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.type === config.bgType);
+        });
+        DOMCache.get('solidBgPicker').style.display = config.bgType === 'solid' ? 'flex' : 'none';
+        DOMCache.get('gradientBgPicker').style.display = config.bgType === 'gradient' ? 'flex' : 'none';
+
+        // 显示弹窗
+        overlay.style.display = 'flex';
+        ApiHelper.call('lock_window_visibility');
+    },
+
+    async saveCustomTheme() {
+        this.originalCustomTheme = JSON.parse(JSON.stringify(this.customThemeConfig));
+        await ApiHelper.updateConfig('userTheme', this.originalCustomTheme);
+        DOMCache.get('themeEditorOverlay').style.display = 'none';
+        ApiHelper.call('unlock_window_visibility');
+        DOMCache.get("themeSettings_box").style.display = 'block';
+    },
+
+    cancelEdit() {
+        this.customThemeConfig = JSON.parse(JSON.stringify(this.originalCustomTheme));
+        this.applyCustomThemeVariables(this.customThemeConfig);
+        DOMCache.get('themeEditorOverlay').style.display = 'none';
+        DOMCache.get("themeSettings_box").style.display = 'block';
     }
 };
 
@@ -1098,7 +1189,7 @@ const FileOperationManager = {
 
     async removeFile(filePath, type = "remove") {
         const result = await ApiHelper.removeFile(filePath, type);
-        await NavigationManager.refreshCurrentPath();
+        await NavigationManager.refreshCurrentPath(false,false,false,true);
         return result;
     },
 
@@ -1110,17 +1201,19 @@ const FileOperationManager = {
 
     async pasteFiles() {
         const result = await ApiHelper.putFile(AppState.currentPath);
-        await NavigationManager.refreshCurrentPath();
+        await NavigationManager.refreshCurrentPath(false,false,true,true);
 
         if (result.files) {
             setTimeout(() => {
+                var e_list = []
                 result.files.forEach(filePath => {
                     const fileId = Utils.generateFileId(filePath);
                     const element = DOMCache.get(fileId);
                     if (element) {
-                        UIUtils.remindFile(element);
+                        e_list.push(element);
                     }
                 });
+                UIUtils.remindFiles(e_list);
             }, 200);
         }
 
@@ -1129,7 +1222,7 @@ const FileOperationManager = {
 
     async refreshAndRemindFile(result) {
         console.log(result)
-        await NavigationManager.refreshCurrentPath(false,false);
+        await NavigationManager.refreshCurrentPath(false,false,false,true);
 
         if (result.file) {
             setTimeout(() => {
@@ -1737,17 +1830,119 @@ const EventManager = {
         this.initThemeSettings();
         this.initBackgroundSettings();
         this.initScaleSettings();
+        this.initThemeEditorEvents();
+    },
+
+    initThemeEditorEvents() {
+        const self = this;
+        
+        // 双击自定义主题卡片打开编辑器
+        const customCard = DOMCache.get('customThemeCard');
+        if (customCard) {
+             customCard.addEventListener('dblclick', () => {
+                 ThemeManager.openEditor();
+             });
+             customCard.addEventListener('contextmenu', (e) => {
+                 e.preventDefault();
+                 ThemeManager.openEditor();
+             });
+         }
+
+         // 编辑图标按钮点击
+         const themeEditIconBtn = DOMCache.get('themeEditIconBtn');
+         if (themeEditIconBtn) {
+             themeEditIconBtn.addEventListener('click', (e) => {
+                 e.stopPropagation(); // 防止触发卡片的单击应用主题
+                 ThemeManager.openEditor();
+             });
+         }
+
+         // 关闭按钮
+        DOMCache.get('closeThemeEditor').addEventListener('click', () => ThemeManager.cancelEdit());
+        DOMCache.get('cancelThemeEdit').addEventListener('click', () => ThemeManager.cancelEdit());
+        DOMCache.get('confirmThemeEdit').addEventListener('click', () => ThemeManager.saveCustomTheme());
+
+        // 颜色选择器实时预览
+        const colorPickers = [
+            { id: 'primaryColorPicker', key: 'primary' },
+            { id: 'secondaryColorPicker', key: 'secondary' },
+            { id: 'bgColorPicker', key: 'bgColor' },
+            { id: 'bgGradient1', key: 'bgGradient1' },
+            { id: 'bgGradient2', key: 'bgGradient2' },
+            { id: 'mainTextColorPicker', key: 'mainText' },
+            { id: 'subTextColorPicker', key: 'subText' }
+        ];
+
+        colorPickers.forEach(picker => {
+            DOMCache.get(picker.id).addEventListener('input', (e) => {
+                ThemeManager.customThemeConfig[picker.key] = e.target.value;
+                ThemeManager.applyCustomThemeVariables(ThemeManager.customThemeConfig);
+            });
+        });
+
+        // 透明度预览
+        DOMCache.get('secondaryAlphaPicker').addEventListener('input', (e) => {
+            const val = e.target.value;
+            ThemeManager.customThemeConfig.secondaryAlpha = parseInt(val);
+            DOMCache.get('secondaryAlphaValue').innerText = val + '%';
+            ThemeManager.applyCustomThemeVariables(ThemeManager.customThemeConfig);
+        });
+
+        // 背景类型切换
+        const bgBtns = DOMCache.getAllBySelector('.bg-type-btn');
+        bgBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const type = btn.dataset.type;
+                ThemeManager.customThemeConfig.bgType = type;
+                
+                bgBtns.forEach(b => b.classList.toggle('active', b === btn));
+                DOMCache.get('solidBgPicker').style.display = type === 'solid' ? 'flex' : 'none';
+                DOMCache.get('gradientBgPicker').style.display = type === 'gradient' ? 'flex' : 'none';
+                
+                ThemeManager.applyCustomThemeVariables(ThemeManager.customThemeConfig);
+            });
+        });
+
+        // 预设点击
+        const presets = {
+            'classic-dark': { primary: '#667eea', secondary: '#28283c', secondaryAlpha: 70, bgType: 'gradient', bgGradient1: '#1a1a2e', bgGradient2: '#16213e', mainText: '#e0e0e0', subText: '#8a9ba8' },
+            'ocean-blue': { primary: '#00c6ff', secondary: '#002147', secondaryAlpha: 70, bgType: 'gradient', bgGradient1: '#004e92', bgGradient2: '#000428', mainText: '#ffffff', subText: '#b0d4ff' },
+            'forest-green': { primary: '#a8e063', secondary: '#1b3a2b', secondaryAlpha: 75, bgType: 'gradient', bgGradient1: '#134e5e', bgGradient2: '#71b280', mainText: '#ffffff', subText: '#d4edda' },
+            'sunset-orange': { primary: '#ff9068', secondary: '#4a1d1d', secondaryAlpha: 70, bgType: 'gradient', bgGradient1: '#f46b45', bgGradient2: '#eea849', mainText: '#ffffff', subText: '#ffeadb' },
+            'sakura-pink': { primary: '#ff758c', secondary: '#4a2c3a', secondaryAlpha: 70, bgType: 'gradient', bgGradient1: '#ff9a9e', bgGradient2: '#fecfef', mainText: '#ffffff', subText: '#ffe0e6' },
+            'midnight-purple': { primary: '#9d50bb', secondary: '#240b36', secondaryAlpha: 80, bgType: 'gradient', bgGradient1: '#232526', bgGradient2: '#414345', mainText: '#e0e0e0', subText: '#a0a0a0' },
+            'cyberpunk': { primary: '#ff00ff', secondary: '#000000', secondaryAlpha: 80, bgType: 'gradient', bgGradient1: '#000000', bgGradient2: '#120458', mainText: '#00ffff', subText: '#ff00ff' },
+            'matcha': { primary: '#8fb9a8', secondary: '#ffffff', secondaryAlpha: 40, bgType: 'gradient', bgGradient1: '#fefad4', bgGradient2: '#d4e4bc', mainText: '#2d342d', subText: '#4e594b' },
+            'mocha': { primary: '#a0785a', secondary: '#1a0f0a', secondaryAlpha: 80, bgType: 'gradient', bgGradient1: '#3d2b1f', bgGradient2: '#1a0f0a', mainText: '#f5f5f5', subText: '#d7ccc8' },
+            'nordic': { primary: '#5e81ac', secondary: '#ffffff', secondaryAlpha: 50, bgType: 'gradient', bgGradient1: '#eceff4', bgGradient2: '#d8dee9', mainText: '#2e3440', subText: '#4c566a' },
+            'golden': { primary: '#f6d365', secondary: '#4a3c1d', secondaryAlpha: 70, bgType: 'gradient', bgGradient1: '#f6d365', bgGradient2: '#fda085', mainText: '#ffffff', subText: '#ffedbc' },
+            'deep-sea': { primary: '#48c6ef', secondary: '#0b2d39', secondaryAlpha: 85, bgType: 'gradient', bgGradient1: '#0b2d39', bgGradient2: '#000000', mainText: '#ffffff', subText: '#6f9d98' }
+        };
+
+        DOMCache.getAllBySelector('.preset-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const name = item.dataset.name;
+                const preset = presets[name];
+                if (preset) {
+                    // 合并预设到当前配置
+                    ThemeManager.customThemeConfig = { ...ThemeManager.customThemeConfig, ...preset };
+                    // 更新 UI 并应用
+                    ThemeManager.openEditor(); // 重新调用以刷新输入框
+                    ThemeManager.applyCustomThemeVariables(ThemeManager.customThemeConfig);
+                }
+            });
+        });
     },
 
     initToggleSettings() {
         const toggles = [
             'autoStartToggle', 'fullScreenToggle', 'fdrToggle',
-            'of_sToggle', 'sysappToggle',/* 'followSystemTheme',*/'imgpreToggle','blurToggle'
+            'of_sToggle', 'sysappToggle',/* 'followSystemTheme',*/'imgpreToggle','blurToggle','showHiddenToggle'
         ];
 
         const configKeys = [
             'auto_start', 'full_screen', 'fdr',
-            'of_s', 'show_sysApp',/* 'follow_sys',*/'imgpre','blur_bg'
+            'of_s', 'show_sysApp',/* 'follow_sys',*/'imgpre','blur_bg','show_hidden_file'
         ];
 
         toggles.forEach((toggleId, index) => {
@@ -1764,6 +1959,9 @@ const EventManager = {
                     }
                 }else if(toggleId === "blurToggle"){
                     ApiHelper.call('set_blur_effect', this.checked,ThemeManager.now_theme);
+                }else if(toggleId === "showHiddenToggle"){
+                    console.log("showHiddenToggle")
+                    NavigationManager.refreshCurrentPath(false,false,false,true)
                 }
             });
         });
@@ -2025,8 +2223,17 @@ const EventManager = {
     },
  
     async setIcon(){
-        await ApiHelper.call("setIcon", AppState.selectedFile.filePath,AppState.selectedFile.edit_ico==undefined)
-        NavigationManager.refreshCurrentPath()
+        r=await ApiHelper.call("setIcon", AppState.selectedFile.filePath,AppState.selectedFile.edit_ico==undefined)
+        if(r["success"]==true){
+            NavigationManager.refreshCurrentPath(false,false,false,true)
+        }else{
+            if(r["message"]){
+                if(r["message"]!="未选择图标"){
+                    UIUtils.showMessage(r["message"],true)
+                }
+            }
+        }
+        
     }
 };
 
@@ -2373,7 +2580,6 @@ async function push(fData = null, useLoadDir = false, path = '') {
 }
 let preview_runing = false
 async function image_preview() {
-    console.log("image_preview")
     try{
         if(preview_runing) return;
         let config = await ApiHelper.getConfig()
@@ -2383,7 +2589,7 @@ async function image_preview() {
             if([".png",".jpg",".jpeg",".bmp",".gif"].includes(file.fileType)){
                 var view_img = await ApiHelper.call("get_imageBase64", file.filePath);
                 if(view_img){
-                    console.log("预览图片："+file.fileName)
+                    // console.log("预览图片："+file.fileName)
                     te = document.getElementById(Utils.generateFileId(file.filePath))
                     te.children[1].src = view_img
                 }
@@ -2524,7 +2730,13 @@ async function load_theme(theme,from_fit) {
             }
         }
         // 加载主题
-        themeCSS.href = CONSTANTS.THEME_PATHS[theme];
+        if (themeCSS.getAttribute('href') !== CONSTANTS.THEME_PATHS[theme]) {
+            themeCSS.href = CONSTANTS.THEME_PATHS[theme];
+        }
+        document.documentElement.setAttribute('data-theme', theme);
+        if (theme === 'custom') {
+            ThemeManager.applyCustomThemeVariables(ThemeManager.customThemeConfig);
+        }
         NavigationManager.refreshCurrentPath();
         render_class_btn()
         console.log(`主题已切换到: ${theme}`);
@@ -2543,7 +2755,6 @@ async function load_theme(theme,from_fit) {
 async function load_bgType(tid){
     if(tid=="1"){
         document.body.style.background = ""
-        document.body.style.backgroundColor = "unset"
     }else if(tid=="2"){
         document.body.style.background = "unset"
         document.body.style.backgroundColor = "rgba(0,0,0,0)"
@@ -2667,6 +2878,7 @@ window.addEventListener('pywebviewready', async function () {
 
         // 初始化设置
         await ConfigManager.updateDefaultDirectory();
+        await ThemeManager.initCustomTheme();
 
         // 加载默认文件
         const config = await ApiHelper.getConfig();
@@ -2692,7 +2904,8 @@ window.addEventListener('pywebviewready', async function () {
                 ['of_sToggle', 'of_s'],
                 ['sysappToggle', 'show_sysApp'],
                 ['imgpreToggle', 'imgpre'],
-                ['blurToggle','blur_bg']
+                ['blurToggle','blur_bg'],
+                ['showHiddenToggle','show_hidden_file']
             ];
 
             toggleConfigs.forEach(([elementId, configKey]) => {
@@ -2918,8 +3131,10 @@ window.addEventListener("keydown", function(event) {
     if (event.key === 'Enter') {
         // 输入框活跃或对话框打开时不触发文件点击
         // if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+        event.preventDefault();
         if (DOMCache.get("renameOverlay").style.display === "flex") return;
         if (DOMCache.get("groupDeleteConfirm").style.display === "flex") return;
+        if (DOMCache.get("themeSettingsPanel").style.display === "flex")return;
         for(let e of [...document.getElementById("filesContainer").children,...document.getElementById("filesListContainer").children]){
             if(e.style.display != "none" && enter_click==false){
                 enter_click = true
@@ -3133,4 +3348,11 @@ async function save_new_order(reload_part){
     console.log(reload_part)
     // NavigationManager.refreshCurrentPath()
     // fileRenderer.render(new_order,reload_part)
+}
+async function scroll_top(){
+    DOMCache.get("content_box").scrollTo({
+        top: 0,
+        behavior: 'smooth',
+    })
+    window.scrollTo(0, 0);
 }

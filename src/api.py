@@ -136,10 +136,10 @@ class AppAPI:
             ucfg.update_config("df_dir_name", "桌面")
             return {"success": True, "data": path, "name": "桌面"}
 
-    def get_fileinfo(self, path,quck=True):
+    def get_fileinfo(self, path,quck=True,ignore_icno=False):
         if path == "desktop" or path == "" or path == "\\":
             path = "desktop"
-        data = itmeRes.update_inf(path,quck)
+        data = itmeRes.update_inf(path,quck,ignore_icno)
         r_data = {"success": True, "data": data["data"],"same":self.file_info_temp==data}
         self.file_info_temp = data
         return r_data
@@ -516,8 +516,8 @@ class AppAPI:
             shutil.rmtree("desktopICO")
         if os.path.exists("itemsTemp.json"):
             os.remove("itemsTemp.json")
-        from src.res_load import itmeRes
         itmeRes.temp={}
+        iconMgr.icon_cache={}
 
     def mouse_state(self):
         return tool.mouseState.get_live_state()
