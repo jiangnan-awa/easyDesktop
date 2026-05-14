@@ -199,7 +199,7 @@ class windowMgr_main():
             return
         self.moving = True
         self.window_state = True
-        self.window.evaluate_js("document.getElementById('themeSettingsPanel').style.display='none';enableScroll();load_search();")
+        self.window.evaluate_js("document.getElementById('themeSettingsPanel').style.display='none';enableScroll();")
         if ucfg.data["full_screen"] == True:
             w,h = screen.get_screen_size()
             self.window.resize(w, h)
@@ -246,7 +246,7 @@ class windowMgr_main():
         print("outwindow_ani")
         self.animateWindow(start_x, start_y, end_x, end_y, rect["width"], rect["height"])
         self.window.evaluate_js("window_state=true;")
-        self.window.evaluate_js("NavigationManager.refreshCurrentPath(true,false);fit_btnBar();")
+        self.window.evaluate_js("NavigationManager.refreshCurrentPath(true,false,false);fit_btnBar();")
 
         tool.mouseState.reset()
         while True:
@@ -460,6 +460,6 @@ class windowMgr_main():
         if part == "cf_type" or part == "cf_hotkey":
             hotkeyReg.hotkey_init()
     def call_refresh(self):
-        self.window.evaluate_js("document.getElementById('b2d').click();fit_btnBar();")
+        self.window.evaluate_js("document.getElementById('b2d').click();fit_btnBar();scroll_top();")
 
 windowMgr = windowMgr_main()

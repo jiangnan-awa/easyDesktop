@@ -886,7 +886,6 @@ const NavigationManager = {
 
     async refreshCurrentPath(quick_update=true,ani=true,kws_clear=true,ign_icno=false) {
         return new Promise(async (resolve) => { 
-            console.log("更新！！！")
             loadingUI.sets("items_ctn",true)
             const result = await ApiHelper.getFileInfo(AppState.currentPath,quick_update,ign_icno);
             // if(result.same==true)return;
