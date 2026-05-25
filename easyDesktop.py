@@ -192,6 +192,7 @@ def on_loaded():
     windowMgr.fit_blur_effect()
     set_window_rounded_corners(hwnd)
     windowMgr.moveIn_window()
+    Thread(target=windowMgr._lifecycle_loop, daemon=True).start()
     # wait_open()
 
 
@@ -200,6 +201,7 @@ public_desktop = os.path.join(os.environ["PUBLIC"], "Desktop")
 
 def quit_ed():
     global icon
+    hotkeyReg.cleanup()
     try:
         tool.mouseState.stop()
     except:
