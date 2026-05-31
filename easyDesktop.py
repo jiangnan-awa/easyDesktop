@@ -12,6 +12,7 @@ import sys
 from easygui import msgbox
 from ctypes import windll,WinDLL,wintypes
 from threading import Thread
+import ctypes
 import config as cfg
 import winerror
 import win32event
@@ -100,6 +101,23 @@ if win32api.GetLastError() == winerror.ERROR_ALREADY_EXISTS:
 if getattr(sys, 'frozen', False):
     base_path = os.path.dirname(os.path.realpath(sys.executable))
     os.chdir(base_path)
+
+# 通过任务计划启动时，提升进程优先级
+def _try_high_priority():
+    try:
+        import subprocess as _sp
+        r = _sp.run(
+            'schtasks /Query /TN "EasyDesktop"',
+            shell=True, capture_output=True, text=True
+        )
+        if r.returncode == 0:
+            HIGH_PRIORITY_CLASS = 0x00000080
+            h = ctypes.windll.kernel32.GetCurrentProcess()
+            ctypes.windll.kernel32.SetPriorityClass(h, HIGH_PRIORITY_CLASS)
+            print("任务计划检测到，已设置高优先级")
+    except:
+        pass
+Thread(target=_try_high_priority, daemon=True).start()
 
 resize_window = None
 icon = None

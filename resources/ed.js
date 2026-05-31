@@ -1962,8 +1962,27 @@ const EventManager = {
                 }else if(toggleId === "showHiddenToggle"){
                     console.log("showHiddenToggle")
                     NavigationManager.refreshCurrentPath(false,false,false,true)
+                }else if(toggleId === "autoStartToggle"){
+                    // 关闭自启动时，同时取消优先级按钮状态
+                    if(this.checked==false){
+                        setPriorityBtnActive(false);
+                    }
+                    // 显隐优先级按钮
+                    DOMCache.get('autoStartPriorityBtn').style.display = this.checked ? '' : 'none';
                 }
             });
+        });
+
+        // 开机自启动优先级按钮
+        DOMCache.get('autoStartPriorityBtn').addEventListener('click', async function () {
+            const isActive = this.classList.contains('active');
+            if (isActive) {
+                // 当前已是高优先级，点击取消
+                await ApiHelper.updateConfig('auto_start_priority', false);
+            } else {
+                // 点击启用高优先级
+                await ApiHelper.updateConfig('auto_start_priority', true);
+            }
         });
 
         // 选择器设置
@@ -2779,6 +2798,17 @@ async function fit_window() {
         await ApiHelper.call('fit_window_end');
     }
 }
+function setPriorityBtnActive(active) {
+    const btn = DOMCache.get('autoStartPriorityBtn');
+    if (!btn) return;
+    if (active) {
+        btn.classList.add('active');
+        btn.innerText = '取消优先级';
+    } else {
+        btn.classList.remove('active');
+        btn.innerText = '启用优先级';
+    }
+}
 let setting_mode = false
 async function disable_settings() {
     setting_mode = true
@@ -2915,6 +2945,9 @@ window.addEventListener('pywebviewready', async function () {
                 }
             });
 
+            // 开机自启动开关打开时才显示优先级按钮
+            DOMCache.get('autoStartPriorityBtn').style.display = config.auto_start ? '' : 'none';
+
             // 更新选择器状态
             DOMCache.get('cf_type_toggle').value = config.cf_type;
             DOMCache.get('out_cf_type_toggle').value = config.out_cf_type;
@@ -2975,6 +3008,9 @@ window.addEventListener('pywebviewready', async function () {
 
         // 应用配置
         await updateUIFromConfig(config);
+
+        // 检查任务计划程序（高优先级自启动）状态
+        ApiHelper.call('get_taskScheduler_state');
 
         // 初始化背景设置
         await initBackgroundSettings();
