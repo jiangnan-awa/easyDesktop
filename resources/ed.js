@@ -2174,7 +2174,7 @@ const EventManager = {
             try{if(event.target.parentNode.id=="menuAddToGroup")return}catch(e){}
             MenuManager.hideAllMenus();
 
-            if (["content_box", "main"].includes(event.target.id)) {
+            if (["content_box", "main",'filesContainer'].includes(event.target.id)) {
                 ApiHelper.call('close_fullscreen_window');
             }
         });
