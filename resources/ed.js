@@ -2103,6 +2103,8 @@ const EventManager = {
                 if (bgUrl) {
                     await ApiHelper.updateConfig("use_bg", true);
                     await ApiHelper.updateConfig("bg", bgUrl);
+                    await ApiHelper.updateConfig("ms_ef", 0);
+                    await ApiHelper.updateConfig("bgType", "1");
                     config = await ApiHelper.getConfig();
                     setTimeout(() => {
                         window.location.reload();
@@ -3010,7 +3012,7 @@ window.addEventListener('pywebviewready', async function () {
         await updateUIFromConfig(config);
 
         // 检查任务计划程序（高优先级自启动）状态
-        ApiHelper.call('get_taskScheduler_state');
+        await ApiHelper.call('get_taskScheduler_state');
 
         // 初始化背景设置
         await initBackgroundSettings();
