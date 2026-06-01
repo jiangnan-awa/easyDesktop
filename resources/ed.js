@@ -23,7 +23,7 @@ const CONSTANTS = {
         "custom": "/theme/theme.css"
     },
 
-    CLICK_DELAY: 100,
+    CLICK_DELAY: 200,
     REMIND_DURATION: 1000,
     ERROR_DISPLAY_TIME: 5000
 };
@@ -2176,7 +2176,7 @@ const EventManager = {
             try{if(event.target.parentNode.id=="menuAddToGroup")return}catch(e){}
             MenuManager.hideAllMenus();
 
-            if (["content_box", "main",'filesContainer'].includes(event.target.id)) {
+            if (["content_box", "main","filesContainer"].includes(event.target.id)) {
                 ApiHelper.call('close_fullscreen_window');
             }
         });
