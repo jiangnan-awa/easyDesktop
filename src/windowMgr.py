@@ -484,9 +484,13 @@ class windowMgr_main():
         self.ignore_action = False
     def call_js(self,js_code):
         try:
-            self.window.evaluate_js(js_code)
+            # 【复审修复】返回 evaluate_js 结果：res_load.delay_update_action 依赖它取
+            # AppState.currentPath 判断是否仍在当前目录、决定是否刷新。原先无 return 恒为 None，
+            # 会导致冷启动占位图标永远不刷新成真实图标（P1 后台刷新失效）。
+            return self.window.evaluate_js(js_code)
         except:
             print(f"调用js失败: {js_code}")
+            return None
         
     def animateWindow(
         self,start_x, start_y, end_x, end_y, width, height, steps=cfg.ANIMATION_STEPS, delay=cfg.ANIMATION_DELAY
@@ -597,9 +601,9 @@ class windowMgr_main():
         return False
 
 
-    def moveIn_window(self):
+    def moveIn_window(self,animate=True):
         screen_width,screen_height,ox,oy = screen.get_active_screen_size(True)
-        
+
         if self.moving == True:
             return
         self.moving = True
@@ -632,7 +636,11 @@ class windowMgr_main():
         self.window.evaluate_js("window_state=false;preview_runing = false;MenuManager.hideAllMenus();")
         print("movein_ani")
         print(current_x, current_y, start_x, start_y, width, height)
-        self.animateWindow(current_x, current_y, start_x, start_y, width, height)
+        if animate:
+            self.animateWindow(current_x, current_y, start_x, start_y, width, height)
+        else:
+            # 【启动优化 P0】跳过 81 步动画，直接把（仍隐藏的）窗口一步定位到屏外起始点
+            win32gui.MoveWindow(hwnd, start_x, start_y, width, height, False)
         self.window.hide()
         self.moving = False
         self.window.evaluate_js("GroupManager.closeGroup();")
