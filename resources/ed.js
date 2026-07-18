@@ -900,9 +900,18 @@ const NavigationManager = {
             AppState.setFiles(result.data);
             loadingUI.sets("items_ctn",false)
 
+            // 如果当前选中了分类，先隐藏容器避免渲染全部内容时的闪烁
+            const hasClassFilter = last_group !== "" && last_group !== "全部";
+            if(hasClassFilter){
+                document.getElementById("filesContainer").style.visibility = "hidden";
+                document.getElementById("filesListContainer").style.visibility = "hidden";
+            }
+
             await fileRenderer.render(result.data,null,ani);
-            if(last_group!="" || last_group!="全部"){
-                change_class(last_group)
+            if(hasClassFilter){
+                await change_class(last_group);
+                document.getElementById("filesContainer").style.visibility = "visible";
+                document.getElementById("filesListContainer").style.visibility = "visible";
             }
             resolve(true);
         });
