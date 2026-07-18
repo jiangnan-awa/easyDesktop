@@ -20,7 +20,8 @@ from src.windowMgr import windowMgr,hotkeyReg
 from src import tool
 from src.ucfg import ucfg
 from src import screen
-from src.shutdown import ShutdownHandler
+from src import api
+from src.shutdown import ShutdownHandler, set_shutdown_registry
 from src.nonblocking import nonblocking
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -183,19 +184,19 @@ def on_loaded():
     win_width,win_height,px,py = tool.get_windowCurrentTargetPos()
     win32gui.MoveWindow(hwnd, px, py, win_width, win_height, True)
     sys_theme()
+    # 【启动优化】合并 view_mode 切换与 panel 隐藏为一次 evaluate_js，减少 UI 线程阻塞次数
+    view_mode_js = "DisplayModeManager.list_view()" if ucfg.data["view"] == "list" else "DisplayModeManager.grid_view()"
     if ucfg.data["view"] == "list":
         print("视图list")
-        window.evaluate_js("DisplayModeManager.list_view()")
-    else:
-        window.evaluate_js("DisplayModeManager.grid_view()")
-    window.evaluate_js("document.getElementById('themeSettingsPanel').style.display='none';enableScroll();")
+    window.evaluate_js(view_mode_js + ";document.getElementById('themeSettingsPanel').style.display='none';enableScroll();")
     # 【启动优化 P0｜风险:中】fit_blur_effect 内部会做窗口区域截图+像素直方图判主题（~30-120ms 同步阻塞）。
-    # 移到后台线程：首帧先由上面 set_blur() 按存储主题立即上毛玻璃，截图判定完成后再异步切到正确主题。
-    Thread(target=windowMgr.fit_blur_effect, daemon=True).start()
+    # 延迟 3s 执行，避开启动阶段 WebView2 GPU 初始化与 DWM 合成竞争，避免鼠标卡顿。
+    def delayed_fit_blur():
+        time.sleep(3)
+        windowMgr.fit_blur_effect()
+    Thread(target=delayed_fit_blur, daemon=True).start()
     set_window_rounded_corners(hwnd)
-    # 【启动优化 P0｜风险:中】启动阶段窗口本就隐藏，moveIn 的 81 步滑入动画（~250ms）对首屏无意义；
-    # animate=False 直接把隐藏窗口定位到屏外，省去 ~250ms。运行期呼出/收回仍走默认 animate=True 动画。
-    windowMgr.moveIn_window(animate=False)
+    windowMgr.moveIn_window()
     Thread(target=windowMgr._lifecycle_loop, daemon=True).start()
     # wait_open()
 
@@ -269,10 +270,7 @@ window = webview.create_window(
 )
 
 windowMgr.set_window(window)
-try:
-    from src.appAction import report
-    report.window = window
-except Exception:
-    pass
+report.window = window
+set_shutdown_registry()
 shutdown_handler = ShutdownHandler(window)
 webview.start(func=on_loaded,debug=not getattr(sys, 'frozen', False))
